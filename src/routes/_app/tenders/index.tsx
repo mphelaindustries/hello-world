@@ -15,7 +15,8 @@ import {
 import { PageHeader } from "@/components/app/PageHeader";
 import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
 import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
-import { daysUntil, formatDate, tenders, type TenderStatus } from "@/data/mock";
+import { daysUntil, formatDate, tenders as mockTenders, type TenderStatus } from "@/data/mock";
+import { getTenders, useLive } from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/tenders/")({
   component: TendersPage,
@@ -48,9 +49,10 @@ function TendersPage() {
   const [category, setCategory] = useState<string>("ALL");
   const [province, setProvince] = useState<string>("ALL");
   const [sort, setSort] = useState<string>("closing");
+  const { data: tenders } = useLive("tenders", getTenders, mockTenders);
 
-  const categories = useMemo(() => ["ALL", ...new Set(tenders.map((t) => t.category))], []);
-  const provinces = useMemo(() => ["ALL", ...new Set(tenders.map((t) => t.location))], []);
+  const categories = useMemo(() => ["ALL", ...new Set(tenders.map((t) => t.category))], [tenders]);
+  const provinces = useMemo(() => ["ALL", ...new Set(tenders.map((t) => t.location))], [tenders]);
 
   const rows = useMemo(() => {
     const filtered = tenders.filter(
@@ -69,7 +71,7 @@ function TendersPage() {
     if (sort === "organisation") sorted.sort((a, b) => a.organisation.localeCompare(b.organisation));
     if (sort === "status") sorted.sort((a, b) => a.status.localeCompare(b.status));
     return sorted;
-  }, [query, status, category, province, sort]);
+  }, [tenders, query, status, category, province, sort]);
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">

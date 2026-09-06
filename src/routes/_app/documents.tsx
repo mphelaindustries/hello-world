@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/app/PageHeader";
-import { companyDocuments } from "@/data/mock";
+import { companyDocuments as mockDocuments } from "@/data/mock";
+import { getCompanyDocuments, useLive } from "@/lib/live-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/documents")({
@@ -24,7 +25,8 @@ export const Route = createFileRoute("/_app/documents")({
 function Documents() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
-  const categories = useMemo(() => ["All", ...new Set(companyDocuments.map((d) => d.category))], []);
+  const { data: companyDocuments } = useLive("documents", getCompanyDocuments, mockDocuments);
+  const categories = useMemo(() => ["All", ...new Set(companyDocuments.map((d) => d.category))], [companyDocuments]);
 
   const docs = companyDocuments.filter(
     (d) =>

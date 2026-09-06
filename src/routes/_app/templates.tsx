@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/app/PageHeader";
-import { emailTemplates } from "@/data/mock";
+import { emailTemplates as mockEmailTemplates } from "@/data/mock";
+import { getEmailTemplates, useLive } from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/templates")({
   component: Templates,
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_app/templates")({
 });
 
 function Templates() {
+  const { data: emailTemplates } = useLive("templates", getEmailTemplates, mockEmailTemplates);
   return (
     <div className="mx-auto max-w-[1200px] space-y-6">
       <PageHeader
