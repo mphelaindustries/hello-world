@@ -9,7 +9,8 @@ import {
   type TenderStatus,
 } from "@/data/mock";
 
-const MODEL = "anthropic/claude-fable-5.1";
+const MODEL = "google/gemma-4-26b-a4b-it:free";
+const FALLBACK_MODELS = ["google/gemma-4-31b-it:free"];
 
 const ChatInput = z.object({
   messages: z
@@ -125,30 +126,46 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
       }
 
       const prompt = await systemPrompt();
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://tender-os.lovable.app",
-        "X-Title": "Tender OS",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [{ role: "system", content: prompt }, ...data.messages],
-        tools: TOOLS,
-        tool_choice: "auto",
-        max_tokens: 256,
-      }),
-    });
+      let res: Response | undefined;
+      let lastStatus = 0;
+      let lastDetail = "";
 
-    if (!res.ok) {
-      const detail = await res.text();
+      for (const model of [MODEL, ...FALLBACK_MODELS]) {
+        const attempt = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://tender-os.lovable.app",
+            "X-Title": "Tender OS",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "system", content: prompt }, ...data.messages],
+            tools: TOOLS,
+            tool_choice: "auto",
+            max_tokens: 1024,
+          }),
+        });
+
+        if (attempt.ok) {
+          res = attempt;
+          break;
+        }
+        lastStatus = attempt.status;
+        lastDetail = await attempt.text();
+      }
+
+    if (!res) {
       return {
-        content: `The AI assistant could not answer right now (OpenRouter ${res.status}). ${detail.slice(0, 200)}`,
+        content:
+          lastStatus === 429
+            ? "The free AI model is busy right now (too many people using it). Please try again in a minute."
+            : `The AI assistant could not answer right now (OpenRouter ${lastStatus}). ${lastDetail.slice(0, 200)}`,
         actions: [] as AssistantAction[],
       };
     }
+
 
     const json = (await res.json()) as {
       choices?: Array<{
