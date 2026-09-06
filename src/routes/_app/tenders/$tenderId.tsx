@@ -68,7 +68,7 @@ function TenderWorkspace() {
     toast.error("Not saved — connect the backend first so changes can be stored.");
 
   const save = async (message = "Tender progress saved.") => {
-    if (!isFirebaseConfigured) return notConnected();
+    if (!isFirebaseConfigured) { notConnected(); return; }
     setSaving(true);
     try {
       await saveTenderProgress(tender.id, { companyOverrides: fields }, message);
@@ -82,10 +82,10 @@ function TenderWorkspace() {
   };
 
   const attach = async (requirementId: string, requirementName: string) => {
-    if (!isFirebaseConfigured) return notConnected();
+    if (!isFirebaseConfigured) { notConnected(); return; }
     const words = requirementName.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
     const match = documents.find((d) => words.some((w) => d.name.toLowerCase().includes(w))) ?? documents[0];
-    if (!match) return toast.error("No company documents available to attach.");
+    if (!match) { toast.error("No company documents available to attach."); return; }
     try {
       await setRequirementDocument(tender.id, requirementId, match.name);
       await router.invalidate();
@@ -96,7 +96,7 @@ function TenderWorkspace() {
   };
 
   const sendReply = async () => {
-    if (!isFirebaseConfigured) return notConnected();
+    if (!isFirebaseConfigured) { notConnected(); return; }
     try {
       const msg = await sendTenderEmail({ ...reply, tenderId: tender.id });
       await router.invalidate();
