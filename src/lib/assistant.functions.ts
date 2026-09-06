@@ -172,6 +172,10 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
         message?.content?.trim() || (actions.length ? "I can do that — confirm below." : "I did not get a reply."),
       actions,
     };
+    } catch (error) {
+      console.error("[assistant] handler error:", error);
+      throw error;
+    }
   });
 
 function safeParse(json: string): Record<string, string> {
