@@ -120,7 +120,7 @@ function TenderWorkspace() {
           <>
             <StatusBadge status={tender.status} />
             <Button variant="outline" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save Progress"}</Button>
-            <Button asChild><Link to="/filler">Open Tender Filler</Link></Button>
+            <Button asChild><Link to="/filler" search={{ tender: tender.id }}>Open Tender Filler</Link></Button>
           </>
         }
       />
@@ -290,7 +290,7 @@ function TenderWorkspace() {
               {["SBD 1 — Invitation to Bid", "SBD 4 — Declaration of Interest", "SBD 6.1 — Preference Points Claim", "Pricing Schedule"].map((f) => (
                 <div key={f} className="flex items-center justify-between rounded-lg border border-border p-3">
                   <p className="text-sm font-medium">{f}</p>
-                  <Button size="sm" variant="outline" asChild><Link to="/filler">Fill in</Link></Button>
+                  <Button size="sm" variant="outline" asChild><Link to="/filler" search={{ tender: tender.id }}>Fill in</Link></Button>
                 </div>
               ))}
             </CardContent>
