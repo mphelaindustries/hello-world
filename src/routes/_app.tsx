@@ -32,8 +32,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "sonner";
 import { notifications as mockNotifications } from "@/data/mock";
-import { getNotifications, useLive } from "@/lib/live-data";
+import {
+  getNotifications, isFirebaseConfigured, markAllNotificationsRead, markNotificationRead,
+  useLive, type LiveNotification,
+} from "@/lib/live-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app")({
@@ -63,7 +67,7 @@ function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { data: notifications, refresh } = useLive("notifications", getNotifications, mockNotifications);
+  const { data: notifications, refresh } = useLive<LiveNotification[]>("notifications", getNotifications, mockNotifications);
   const unreadCount = notifications.filter((n) => !("read" in n) || !n.read).length;
 
   const readOne = async (id: string) => {
