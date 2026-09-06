@@ -41,6 +41,9 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app")({
+  // Initialise the Firebase client before any page renders so live-data
+  // reads/writes see the settled isFirebaseConfigured value.
+  loader: () => ensureFirebase(),
   component: AppLayout,
 });
 
