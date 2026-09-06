@@ -134,8 +134,27 @@ function TenderFiller() {
           )}
 
           {step === 4 && (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-sm">
+            <div>
+              <div className="space-y-3 sm:hidden">
+                {[
+                  ["Site establishment", "1", "R 420 000", "R 420 000"],
+                  ["Earthworks", "1 800", "R 240", "R 432 000"],
+                  ["Structural works", "1", "R 6 100 000", "R 6 100 000"],
+                  ["Finishes", "600", "R 2 400", "R 1 440 000"],
+                  ["External works", "1", "R 1 980 000", "R 1 980 000"],
+                ].map((r) => (
+                  <div key={r[0]} className="space-y-3 rounded-lg border border-border p-3">
+                    <p className="text-sm font-medium">{r[0]}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1"><Label>Quantity</Label><Input defaultValue={r[1]} /></div>
+                      <div className="space-y-1"><Label>Rate</Label><Input defaultValue={r[2]} /></div>
+                    </div>
+                    <div className="flex justify-between border-t border-border pt-2 text-sm"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{r[3]}</span></div>
+                  </div>
+                ))}
+                <div className="flex justify-between rounded-lg bg-muted p-3 text-sm font-semibold"><span>Total (excl. VAT)</span><span>R 10 372 000</span></div>
+              </div>
+              <table className="hidden w-full text-sm sm:table">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Item</th>

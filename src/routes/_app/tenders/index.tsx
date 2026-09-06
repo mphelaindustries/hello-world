@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/app/PageHeader";
-import { MatchScore, StatusBadge } from "@/components/app/StatusBadge";
+import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
+import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
 import { daysUntil, formatDate, tenders, type TenderStatus } from "@/data/mock";
 
 export const Route = createFileRoute("/_app/tenders/")({
@@ -90,13 +91,13 @@ function TendersPage() {
       />
 
       <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 pt-6">
-          <div className="relative min-w-[220px] flex-1">
+        <CardContent className="grid gap-2 pt-6 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center">
+          <div className="relative min-w-0 sm:col-span-2 xl:min-w-[220px] xl:flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search tenders..." className="pl-9" />
           </div>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-full xl:w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               {statuses.map((s) => (
                 <SelectItem key={s} value={s}>{s === "ALL" ? "All statuses" : s}</SelectItem>
@@ -104,7 +105,7 @@ function TendersPage() {
             </SelectContent>
           </Select>
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectTrigger className="w-full xl:w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               {categories.map((c) => (
                 <SelectItem key={c} value={c}>{c === "ALL" ? "All categories" : c}</SelectItem>
@@ -112,7 +113,7 @@ function TendersPage() {
             </SelectContent>
           </Select>
           <Select value={province} onValueChange={setProvince}>
-            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Province" /></SelectTrigger>
+            <SelectTrigger className="w-full xl:w-[150px]"><SelectValue placeholder="Province" /></SelectTrigger>
             <SelectContent>
               {provinces.map((p) => (
                 <SelectItem key={p} value={p}>{p === "ALL" ? "All provinces" : p}</SelectItem>
@@ -120,7 +121,7 @@ function TendersPage() {
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full xl:w-[160px]">
               <SlidersHorizontal className="size-4" />
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
@@ -133,24 +134,44 @@ function TendersPage() {
               <SelectItem value="status">Status</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => toast.success("Advanced filters applied.")}>
+          <Button className="w-full" variant="outline" onClick={() => toast.success("Advanced filters applied.")}>
             <Filter className="size-4" /> Filters
           </Button>
-          <Button variant="outline" onClick={() => toast.success("Tender list exported.")}>
+          <Button className="w-full" variant="outline" onClick={() => toast.success("Tender list exported.")}>
             <Download className="size-4" /> Export
           </Button>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="overflow-x-auto pt-6">
+        <CardContent className="pt-2 md:pt-6">
           {rows.length === 0 ? (
             <div className="py-16 text-center">
               <p className="text-sm font-medium">No tenders found.</p>
               <p className="mt-1 text-sm text-muted-foreground">Try changing your filters or run the scraper.</p>
             </div>
           ) : (
-            <table className="w-full min-w-[980px] text-sm">
+            <>
+            <div className="divide-y divide-border md:hidden">
+              {rows.map((t) => (
+                <MobileDetailDialog
+                  key={t.id}
+                  title={t.name}
+                  subtitle={t.reference}
+                  summary={<><StatusBadge status={t.status} /><DeadlinePill days={daysUntil(t.closingDate)} /></>}
+                  details={[
+                    { label: "Organisation", value: t.organisation },
+                    { label: "Category", value: t.category },
+                    { label: "Location", value: t.location },
+                    { label: "Closing date", value: formatDate(t.closingDate) },
+                    { label: "Match", value: `${t.match}%` },
+                    { label: "Status", value: <StatusBadge status={t.status} /> },
+                  ]}
+                  actions={<Button asChild><Link to="/tenders/$tenderId" params={{ tenderId: t.id }}>Open tender</Link></Button>}
+                />
+              ))}
+            </div>
+            <table className="hidden w-full min-w-[980px] text-sm md:table">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <th className="pb-2 font-medium">Tender</th>
@@ -189,6 +210,7 @@ function TendersPage() {
                 ))}
               </tbody>
             </table>
+            </>
           )}
         </CardContent>
       </Card>

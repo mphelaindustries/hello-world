@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/app/PageHeader";
+import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
 import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
 import { daysUntil, formatDate, tenders } from "@/data/mock";
 
@@ -100,8 +101,25 @@ function Dashboard() {
               </Link>
             </Button>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+          <CardContent>
+            <div className="divide-y divide-border md:hidden">
+              {tenders.slice(0, 6).map((t) => (
+                <MobileDetailDialog
+                  key={t.id}
+                  title={t.name}
+                  subtitle={`${t.category} · ${t.location}`}
+                  summary={<><StatusBadge status={t.status} /><DeadlinePill days={daysUntil(t.closingDate)} /></>}
+                  details={[
+                    { label: "Organisation", value: t.organisation },
+                    { label: "Closing date", value: formatDate(t.closingDate) },
+                    { label: "Status", value: <StatusBadge status={t.status} /> },
+                    { label: "Match", value: `${t.match}%` },
+                  ]}
+                  actions={<Button asChild><Link to="/tenders/$tenderId" params={{ tenderId: t.id }}>Open tender</Link></Button>}
+                />
+              ))}
+            </div>
+            <table className="hidden w-full text-sm md:table">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <th className="pb-2 font-medium">Tender</th>

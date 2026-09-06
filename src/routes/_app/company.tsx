@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/app/PageHeader";
+import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
 import { certifications, company, directors, experience } from "@/data/mock";
 
 export const Route = createFileRoute("/_app/company")({
@@ -44,7 +45,7 @@ function CompanyProfile() {
     <div className="mx-auto max-w-[1200px] space-y-6">
       <PageHeader title="Company Profile" subtitle="Information reused across every tender submission." />
       <Tabs defaultValue="details">
-        <TabsList>
+        <TabsList className="grid h-auto w-full grid-cols-2 sm:inline-flex sm:w-auto">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="directors">Directors</TabsTrigger>
           <TabsTrigger value="certifications">Certifications</TabsTrigger>
@@ -105,8 +106,24 @@ function CompanyProfile() {
 
         <TabsContent value="experience" className="mt-4">
           <Card>
-            <CardContent className="overflow-x-auto pt-6">
-              <table className="w-full min-w-[640px] text-sm">
+            <CardContent className="pt-2 sm:pt-6">
+              <div className="divide-y divide-border sm:hidden">
+                {experience.map((x) => (
+                  <MobileDetailDialog
+                    key={x.id}
+                    title={x.project}
+                    subtitle={x.client}
+                    summary={<span className="text-xs font-semibold text-foreground">{x.value}</span>}
+                    details={[
+                      { label: "Client", value: x.client },
+                      { label: "Value", value: x.value },
+                      { label: "Year", value: x.year },
+                      { label: "Duration", value: x.duration },
+                    ]}
+                  />
+                ))}
+              </div>
+              <table className="hidden w-full text-sm sm:table">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Project</th>

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/app/PageHeader";
+import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
 import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
 import { company, companyDocuments, daysUntil, experience, formatDate, tenders } from "@/data/mock";
 
@@ -75,7 +76,7 @@ function TenderWorkspace() {
       </Card>
 
       <Tabs defaultValue="overview">
-        <TabsList className="flex w-full flex-wrap justify-start">
+        <TabsList className="grid h-auto w-full grid-cols-2 justify-start sm:flex sm:flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="requirements">Requirements</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -127,8 +128,24 @@ function TenderWorkspace() {
 
         <TabsContent value="requirements" className="mt-4">
           <Card>
-            <CardContent className="overflow-x-auto pt-6">
-              <table className="w-full min-w-[720px] text-sm">
+            <CardContent className="pt-2 md:pt-6">
+              <div className="divide-y divide-border md:hidden">
+                {tender.requirements.map((r) => (
+                  <MobileDetailDialog
+                    key={r.id}
+                    title={r.name}
+                    subtitle={r.category}
+                    summary={<StatusBadge status={r.status} />}
+                    details={[
+                      { label: "Category", value: r.category },
+                      { label: "Document", value: r.attachedDocument ?? "Not attached" },
+                      { label: "Status", value: <StatusBadge status={r.status} /> },
+                    ]}
+                    actions={<Button onClick={() => toast.success("Document attached to tender.")}><Paperclip className="size-4" /> {r.attachedDocument ? "Replace document" : "Attach document"}</Button>}
+                  />
+                ))}
+              </div>
+              <table className="hidden w-full text-sm md:table">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Requirement</th>
@@ -237,8 +254,30 @@ function TenderWorkspace() {
 
         <TabsContent value="pricing" className="mt-4">
           <Card>
-            <CardContent className="overflow-x-auto pt-6">
-              <table className="w-full min-w-[600px] text-sm">
+            <CardContent className="pt-2 md:pt-6">
+              <div className="divide-y divide-border md:hidden">
+                {[
+                  ["Site establishment", "1", "Sum", "R 420 000", "R 420 000"],
+                  ["Earthworks", "1 800", "m³", "R 240", "R 432 000"],
+                  ["Structural works", "1", "Sum", "R 6 100 000", "R 6 100 000"],
+                  ["Finishes", "600", "m²", "R 2 400", "R 1 440 000"],
+                  ["External works", "1", "Sum", "R 1 980 000", "R 1 980 000"],
+                ].map((row) => (
+                  <MobileDetailDialog
+                    key={row[0] ?? "pricing-item"}
+                    title={row[0] ?? "Pricing item"}
+                    subtitle={row[4] ?? "—"}
+                    details={[
+                      { label: "Quantity", value: row[1] ?? "—" },
+                      { label: "Unit", value: row[2] ?? "—" },
+                      { label: "Rate", value: row[3] ?? "—" },
+                      { label: "Amount", value: row[4] ?? "—" },
+                    ]}
+                  />
+                ))}
+                <div className="flex justify-between px-4 py-4 text-sm font-semibold"><span>Total (excl. VAT)</span><span>R 10 372 000</span></div>
+              </div>
+              <table className="hidden w-full text-sm md:table">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="pb-2 font-medium">Item</th>
