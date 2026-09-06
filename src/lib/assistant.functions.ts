@@ -1,8 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { company, companyDocuments, emailTemplates, scraperSources, tenders } from "@/data/mock";
+import {
+  company,
+  companyDocuments,
+  emailTemplates,
+  scraperSources,
+  tenders,
+  type TenderStatus,
+} from "@/data/mock";
 
-const MODEL = "anthropic/claude-3.5-sonnet";
+const MODEL = "anthropic/claude-fable-5.1";
 
 const ChatInput = z.object({
   messages: z
@@ -70,7 +77,7 @@ const TOOLS = [
   },
 ];
 
-function systemPrompt() {
+async function systemPrompt() {
   const tenderLines = tenders
     .map(
       (t) =>
@@ -107,31 +114,40 @@ ${templateLines}`;
 export const chatWithAssistant = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ChatInput.parse(input))
   .handler(async ({ data }) => {
-    const key = process.env["OPENROUTER_API_KEY"];
-    if (!key) {
-      return {
-        content: "The assistant is not connected yet — an OpenRouter API key still needs to be saved.",
-        actions: [] as AssistantAction[],
-      };
-    }
+    try {
+      const key = process.env["OPENROUTER_API_KEY"];
+      console.log("[assistant] key present:", Boolean(key));
+      if (!key) {
+        return {
+          content: "The assistant is not connected yet — an OpenRouter API key still needs to be saved.",
+          actions: [] as AssistantAction[],
+        };
+      }
 
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const prompt = await systemPrompt();
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        authorization: `Bearer ${key}`,
-        "content-type": "application/json",
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://tender-os.lovable.app",
+        "X-Title": "Tender OS",
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: [{ role: "system", content: systemPrompt() }, ...data.messages],
+        messages: [{ role: "system", content: prompt }, ...data.messages],
         tools: TOOLS,
         tool_choice: "auto",
+        max_tokens: 256,
       }),
     });
 
     if (!res.ok) {
       const detail = await res.text();
-      throw new Error(`Assistant unavailable (${res.status}): ${detail.slice(0, 300)}`);
+      return {
+        content: `The AI assistant could not answer right now (OpenRouter ${res.status}). ${detail.slice(0, 200)}`,
+        actions: [] as AssistantAction[],
+      };
     }
 
     const json = (await res.json()) as {
@@ -159,6 +175,10 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
         message?.content?.trim() || (actions.length ? "I can do that — confirm below." : "I did not get a reply."),
       actions,
     };
+    } catch (error) {
+      console.error("[assistant] handler error:", error);
+      throw error;
+    }
   });
 
 function safeParse(json: string): Record<string, string> {
@@ -194,7 +214,45 @@ export const runAssistantAction = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ActionInput.parse(input))
   .handler(async ({ data }) => {
     const args = safeParse(data.argsJson);
-    // Actions run against the demo data until the Firebase backend is connected.
+
+    // Try to execute against the real Firebase backend when it is configured.
+    // If it is not ready, the demo responses below let the user see the flow.
+    try {
+      const {
+        isFirebaseConfigured,
+        runScraperNow,
+        sendTenderEmail,
+        setTenderStatus,
+      } = await import("@/lib/live-data");
+
+      if (isFirebaseConfigured) {
+        switch (data.name) {
+          case "run_scraper": {
+            const sources = args["sources"]
+              ? args["sources"].split(",").map((s) => s.trim()).filter(Boolean)
+              : undefined;
+            const message = await runScraperNow(sources);
+            return { ok: true, message };
+          }
+          case "send_email": {
+            const message = await sendTenderEmail({
+              to: args["to"] ?? "",
+              subject: args["subject"] ?? "",
+              body: args["body"] ?? "",
+              ...(args["tenderId"] ? { tenderId: args["tenderId"] } : {}),
+            });
+            return { ok: true, message };
+          }
+          case "update_tender_status": {
+            await setTenderStatus(args["tenderId"] ?? "", args["status"] as TenderStatus);
+            return { ok: true, message: `Status updated to ${args["status"] ?? ""}.` };
+          }
+        }
+      }
+    } catch {
+      // Backend not reachable yet — fall through to the demo response.
+    }
+
     switch (data.name) {
       case "run_scraper":
         return { ok: true, message: "Scraper run started. New tenders will appear on the Tenders page." };
