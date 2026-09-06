@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() { return request.auth != null; }
+    function role() {
+      return signedIn()
+        ? firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
+        : 'none';
+    }
+    function isAdmin()  { return role() == 'admin'; }
+    function isMember() { return role() == 'admin' || role() == 'member'; }
+    function isViewer() { return isMember() || role() == 'viewer'; }
+
+    // Company document vault (BBBEE certificate, CIDB, tax clearance, CVs...)
+    match /company/{fileName} {
+      allow read: if isViewer();
+      allow write: if isMember()
+        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/.*|application/vnd.*');
+      allow delete: if isAdmin();
+    }
+
+    // Tender documents downloaded by the scraper, plus submission packages.
+    match /tenders/{tenderId}/{fileName} {
+      allow read: if isViewer();
+      allow write: if isMember() && request.resource.size < 50 * 1024 * 1024;
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

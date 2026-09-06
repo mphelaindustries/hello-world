@@ -1,0 +1,116 @@
+rules_version = '2';
+
+// Tender OS security rules.
+// Principle: the app is a single-company workspace. Every signed-in member can
+// read operational data; only admins can change company-level records; the
+// scraper and Gmail token store are server-only (Cloud Functions / Cloud Run
+// use the Admin SDK, which bypasses these rules).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function role() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? userDoc().role
+        : 'none';
+    }
+
+    function isAdmin()  { return role() == 'admin'; }
+    function isMember() { return role() == 'admin' || role() == 'member'; }
+    function isViewer() { return role() == 'admin' || role() == 'member' || role() == 'viewer'; }
+
+    // ---- users -------------------------------------------------------
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      // A user may edit their own profile but never their own role.
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin();
+    }
+
+    // ---- tenders -----------------------------------------------------
+    // Written by the scraper via the Admin SDK. Members may update workflow
+    // fields (status, notes, assignment) but never scraped source fields.
+    match /tenders/{tenderId} {
+      allow read: if isViewer();
+      allow create, delete: if isAdmin();
+      allow update: if isMember()
+        && request.resource.data.reference == resource.data.reference
+        && request.resource.data.sourceId == resource.data.sourceId
+        && request.resource.data.sourceUrl == resource.data.sourceUrl;
+
+      match /requirements/{reqId} {
+        allow read: if isViewer();
+        allow write: if isMember();
+      }
+      match /activity/{actId} {
+        allow read: if isViewer();
+        allow create: if isMember();
+        allow update, delete: if false; // audit trail is append-only
+      }
+      match /pricing/{lineId} {
+        allow read: if isViewer();
+        allow write: if isMember();
+      }
+    }
+
+    // ---- scraper ------------------------------------------------------
+    match /sources/{sourceId} {
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    match /scraperRuns/{runId} {
+      allow read: if isViewer();
+      allow write: if false; // written server-side only
+    }
+
+    // ---- company profile & documents ----------------------------------
+    match /company/{docId} {
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    match /documents/{docId} {
+      allow read: if isViewer();
+      allow create, update: if isMember();
+      allow delete: if isAdmin();
+    }
+
+    // ---- correspondence -----------------------------------------------
+    match /emails/{emailId} {
+      allow read: if isViewer();
+      allow create: if false;          // created by the sendEmail function
+      allow update, delete: if isAdmin();
+    }
+    match /templates/{templateId} {
+      allow read: if isViewer();
+      allow write: if isMember();
+    }
+
+    // ---- notifications -------------------------------------------------
+    match /notifications/{notifId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      // only the "read" flag may be flipped by the owner
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false;
+    }
+
+    // ---- secrets: never client-readable ---------------------------------
+    match /secrets/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Anything not listed above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
