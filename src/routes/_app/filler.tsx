@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/app/PageHeader";
-import { company as mockCompany, companyDocuments as mockDocuments, experience as mockExperience } from "@/data/mock";
-import { getCompanyDocuments, getCompanyProfile, useLive } from "@/lib/live-data";
+import { company as mockCompany, companyDocuments as mockDocuments, experience as mockExperience, tenders as mockTenders } from "@/data/mock";
+import {
+  getCompanyDocuments, getCompanyProfile, getTenderDraft, isFirebaseConfigured,
+  saveTenderDraft, useLive,
+} from "@/lib/live-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/filler")({
   component: TenderFiller,
+  validateSearch: (search: Record<string, unknown>) => ({
+    tender: typeof search["tender"] === "string" ? (search["tender"] as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Tender Filler | Tender OS" },
@@ -27,16 +33,12 @@ export const Route = createFileRoute("/_app/filler")({
 
 const steps = ["Company Information", "Compliance", "Experience", "Technical", "Pricing", "Declarations", "Final Review"];
 
-const compliance = [
-  { name: "CIPC Registration", doc: "CIPC.pdf", ok: true },
-  { name: "Tax Compliance", doc: "Tax-Compliance.pdf", ok: true },
-  { name: "B-BBEE", doc: "B-BBEE.pdf", ok: true },
-  { name: "Bank Confirmation", doc: "Bank-Confirmation.pdf", ok: true },
-  { name: "COIDA", doc: "Missing", ok: false },
-];
-
 function TenderFiller() {
+  const { tender: tenderParam } = Route.useSearch();
+  const tenderId = tenderParam ?? mockTenders[0]!.id;
   const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const { data: profile } = useLive("company", getCompanyProfile, {
     company: mockCompany,
     directors: [],
@@ -46,7 +48,41 @@ function TenderFiller() {
   const { data: documents } = useLive("documents", getCompanyDocuments, mockDocuments);
   const company = profile.company;
   const experience = profile.experience;
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([experience[0]!.id, experience[2]!.id]);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>(
+    [experience[0]?.id, experience[2]?.id].filter(Boolean) as string[],
+  );
+
+  useEffect(() => {
+    let active = true;
+    void getTenderDraft(tenderId).then((draft) => {
+      if (!active || !draft) return;
+      if (Array.isArray(draft["selectedProjects"])) setSelectedProjects(draft["selectedProjects"] as string[]);
+      if (typeof draft["step"] === "number") setStep(draft["step"] as number);
+      if (draft["answers"] && typeof draft["answers"] === "object") {
+        setAnswers(draft["answers"] as Record<string, string>);
+      }
+    });
+    return () => { active = false; };
+  }, [tenderId]);
+
+  const answer = (key: string, fallback: string) => answers[key] ?? fallback;
+  const setAnswer = (key: string, value: string) => setAnswers((a) => ({ ...a, [key]: value }));
+
+  const saveDraft = async (nextStep = step) => {
+    if (!isFirebaseConfigured) {
+      toast.error("Not saved — connect the backend first so answers can be stored.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveTenderDraft(tenderId, { step: nextStep, selectedProjects, answers });
+      toast.success("Tender progress saved.");
+    } catch {
+      toast.error("Could not save your progress.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const compliance = [
     { name: "CIPC Registration", doc: documents.find((d) => d.name.toLowerCase().includes("cipc"))?.name ?? "CIPC.pdf", ok: true },
@@ -61,7 +97,7 @@ function TenderFiller() {
       <PageHeader
         title="Tender Filler"
         subtitle="Construction of Community Hall — DPW-2026-001"
-        actions={<Button variant="outline" onClick={() => toast.success("Tender progress saved.")}>Save Progress</Button>}
+        actions={<Button variant="outline" disabled={saving} onClick={() => void saveDraft()}>{saving ? "Saving…" : "Save Progress"}</Button>}
       />
 
       <div className="flex flex-wrap gap-2">
@@ -94,7 +130,7 @@ function TenderFiller() {
                   ["Contact Person", company.contactPerson],
                   ["Email", company.email],
                 ].map(([k, v]) => (
-                  <div key={k} className="space-y-1.5"><Label>{k}</Label><Input defaultValue={v} /></div>
+                  <div key={k} className="space-y-1.5"><Label>{k}</Label><Input value={answer(k!, v!)} onChange={(e) => setAnswer(k!, e.target.value)} /></div>
                 ))}
               </div>
             </>
@@ -141,12 +177,12 @@ function TenderFiller() {
 
           {step === 3 && (
             <div className="grid gap-4">
-              <div className="space-y-1.5"><Label>Proposed methodology</Label><Textarea rows={5} defaultValue="Works will be executed in three phases: site establishment, structural works, and finishes with external works running in parallel." /></div>
+              <div className="space-y-1.5"><Label>Proposed methodology</Label><Textarea rows={5} value={answer("methodology", "Works will be executed in three phases: site establishment, structural works, and finishes with external works running in parallel.")} onChange={(e) => setAnswer("methodology", e.target.value)} /></div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5"><Label>Programme duration (months)</Label><Input defaultValue="11" /></div>
-                <div className="space-y-1.5"><Label>Site supervisor</Label><Input defaultValue="Sipho Radebe" /></div>
-                <div className="space-y-1.5"><Label>CIDB grading</Label><Input defaultValue="6GB PE" /></div>
-                <div className="space-y-1.5"><Label>Local labour commitment</Label><Input defaultValue="30%" /></div>
+                <div className="space-y-1.5"><Label>Programme duration (months)</Label><Input value={answer("duration", "11")} onChange={(e) => setAnswer("duration", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Site supervisor</Label><Input value={answer("supervisor", "Sipho Radebe")} onChange={(e) => setAnswer("supervisor", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>CIDB grading</Label><Input value={answer("cidb", "6GB PE")} onChange={(e) => setAnswer("cidb", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Local labour commitment</Label><Input value={answer("localLabour", "30%")} onChange={(e) => setAnswer("localLabour", e.target.value)} /></div>
               </div>
             </div>
           )}
@@ -164,8 +200,8 @@ function TenderFiller() {
                   <div key={r[0]} className="space-y-3 rounded-lg border border-border p-3">
                     <p className="text-sm font-medium">{r[0]}</p>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1"><Label>Quantity</Label><Input defaultValue={r[1]} /></div>
-                      <div className="space-y-1"><Label>Rate</Label><Input defaultValue={r[2]} /></div>
+                      <div className="space-y-1"><Label>Quantity</Label><Input value={answer(`qty:${r[0]}`, r[1]!)} onChange={(e) => setAnswer(`qty:${r[0]}`, e.target.value)} /></div>
+                      <div className="space-y-1"><Label>Rate</Label><Input value={answer(`rate:${r[0]}`, r[2]!)} onChange={(e) => setAnswer(`rate:${r[0]}`, e.target.value)} /></div>
                     </div>
                     <div className="flex justify-between border-t border-border pt-2 text-sm"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{r[3]}</span></div>
                   </div>
@@ -191,8 +227,8 @@ function TenderFiller() {
                   ].map((r) => (
                     <tr key={r[0]}>
                       <td className="py-3 pr-3 font-medium">{r[0]}</td>
-                      <td className="py-3 pr-3"><Input defaultValue={r[1]} className="h-8 w-24" /></td>
-                      <td className="py-3 pr-3"><Input defaultValue={r[2]} className="h-8 w-32" /></td>
+                      <td className="py-3 pr-3"><Input value={answer(`qty:${r[0]}`, r[1]!)} onChange={(e) => setAnswer(`qty:${r[0]}`, e.target.value)} className="h-8 w-24" /></td>
+                      <td className="py-3 pr-3"><Input value={answer(`rate:${r[0]}`, r[2]!)} onChange={(e) => setAnswer(`rate:${r[0]}`, e.target.value)} className="h-8 w-32" /></td>
                       <td className="py-3 tabular-nums">{r[3]}</td>
                     </tr>
                   ))}
@@ -205,7 +241,7 @@ function TenderFiller() {
             </div>
           )}
 
-          {step === 5 && <Declarations />}
+          {step === 5 && <Declarations onSave={() => void saveDraft()} />}
 
           {step === 6 && (
             <div className="space-y-3">
@@ -231,8 +267,9 @@ function TenderFiller() {
         <Button
           disabled={step === steps.length - 1}
           onClick={() => {
-            setStep((s) => s + 1);
-            toast.success("Tender progress saved.");
+            const next = step + 1;
+            setStep(next);
+            void saveDraft(next);
           }}
         >
           Next <ChevronRight className="size-4" />
@@ -242,7 +279,7 @@ function TenderFiller() {
   );
 }
 
-function Declarations() {
+function Declarations({ onSave }: { onSave: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
 
@@ -309,7 +346,7 @@ function Declarations() {
           <Button size="sm" variant="outline" onClick={() => toast.success("Signature uploaded.")}>
             <Upload className="size-4" /> Upload Signature
           </Button>
-          <Button size="sm" onClick={() => toast.success("Declarations saved.")}><Check className="size-4" /> Save</Button>
+          <Button size="sm" onClick={onSave}><Check className="size-4" /> Save</Button>
         </div>
       </div>
     </div>

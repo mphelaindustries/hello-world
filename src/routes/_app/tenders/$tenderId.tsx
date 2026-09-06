@@ -1,4 +1,5 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import { ArrowLeft, Building2, CalendarDays, Download, FileText, MapPin, Paperclip, Send, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,10 @@ import { PageHeader } from "@/components/app/PageHeader";
 import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
 import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
 import { company, companyDocuments, daysUntil, experience, formatDate, tenders as mockTenders } from "@/data/mock";
-import { getCompanyDocuments, getCompanyProfile, getTender, useLive } from "@/lib/live-data";
+import {
+  getCompanyDocuments, getCompanyProfile, getTender, isFirebaseConfigured,
+  saveTenderProgress, sendTenderEmail, setRequirementDocument, useLive,
+} from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/tenders/$tenderId")({
   component: TenderWorkspace,
@@ -33,9 +37,10 @@ export const Route = createFileRoute("/_app/tenders/$tenderId")({
 
 function TenderWorkspace() {
   const tender = Route.useLoaderData();
+  const router = useRouter();
   const completed = tender.requirements.filter((r) => r.status === "COMPLETED").length;
   const total = tender.requirements.length;
-  const pct = Math.round((completed / total) * 100);
+  const pct = total ? Math.round((completed / total) * 100) : 0;
   const missing = tender.requirements.filter((r) => r.status !== "COMPLETED");
 
   const { data: profile } = useLive("company", getCompanyProfile, {
@@ -47,6 +52,60 @@ function TenderWorkspace() {
   const { data: documents } = useLive("documents", getCompanyDocuments, companyDocuments);
   const liveCompany = profile.company;
   const liveExperience = profile.experience;
+
+  const [saving, setSaving] = useState(false);
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const [reply, setReply] = useState({
+    to: tender.contactEmail,
+    subject: `Tender Submission — ${tender.reference}`,
+    body: `Dear ${tender.contact},\n\nPlease find attached our submission for ${tender.reference}.\n\nKind regards,\nLufuno Mphela`,
+  });
+
+  const field = (key: string, fallback: string) => fields[key] ?? fallback;
+  const setField = (key: string, value: string) => setFields((f) => ({ ...f, [key]: value }));
+
+  const notConnected = () =>
+    toast.error("Not saved — connect the backend first so changes can be stored.");
+
+  const save = async (message = "Tender progress saved.") => {
+    if (!isFirebaseConfigured) { notConnected(); return; }
+    setSaving(true);
+    try {
+      await saveTenderProgress(tender.id, { companyOverrides: fields }, message);
+      await router.invalidate();
+      toast.success(message);
+    } catch {
+      toast.error("Could not save — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const attach = async (requirementId: string, requirementName: string) => {
+    if (!isFirebaseConfigured) { notConnected(); return; }
+    const words = requirementName.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+    const match = documents.find((d) => words.some((w) => d.name.toLowerCase().includes(w))) ?? documents[0];
+    if (!match) { toast.error("No company documents available to attach."); return; }
+    try {
+      await setRequirementDocument(tender.id, requirementId, match.name);
+      await router.invalidate();
+      toast.success(`${match.name} attached.`);
+    } catch {
+      toast.error("Could not attach the document.");
+    }
+  };
+
+  const sendReply = async () => {
+    if (!isFirebaseConfigured) { notConnected(); return; }
+    try {
+      const msg = await sendTenderEmail({ ...reply, tenderId: tender.id });
+      await router.invalidate();
+      toast.success(msg);
+    } catch {
+      toast.error("Could not send the email.");
+    }
+  };
+
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
@@ -60,8 +119,8 @@ function TenderWorkspace() {
         actions={
           <>
             <StatusBadge status={tender.status} />
-            <Button variant="outline" onClick={() => toast.success("Tender progress saved.")}>Save Progress</Button>
-            <Button asChild><Link to="/filler">Open Tender Filler</Link></Button>
+            <Button variant="outline" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save Progress"}</Button>
+            <Button asChild><Link to="/filler" search={{ tender: tender.id }}>Open Tender Filler</Link></Button>
           </>
         }
       />
@@ -152,7 +211,7 @@ function TenderWorkspace() {
                       { label: "Document", value: r.attachedDocument ?? "Not attached" },
                       { label: "Status", value: <StatusBadge status={r.status} /> },
                     ]}
-                    actions={<Button onClick={() => toast.success("Document attached to tender.")}><Paperclip className="size-4" /> {r.attachedDocument ? "Replace document" : "Attach document"}</Button>}
+                    actions={<Button onClick={() => void attach(r.id, r.name)}><Paperclip className="size-4" /> {r.attachedDocument ? "Replace document" : "Attach document"}</Button>}
                   />
                 ))}
               </div>
@@ -174,7 +233,7 @@ function TenderWorkspace() {
                       <td className="py-3 pr-3 text-muted-foreground">{r.attachedDocument ?? "—"}</td>
                       <td className="py-3 pr-3"><StatusBadge status={r.status} /></td>
                       <td className="py-3 text-right">
-                        <Button size="sm" variant="ghost" onClick={() => toast.success("Document attached to tender.")}>
+                        <Button size="sm" variant="ghost" onClick={() => void attach(r.id, r.name)}>
                           <Paperclip className="size-4" /> {r.attachedDocument ? "Replace" : "Attach"}
                         </Button>
                       </td>
@@ -231,7 +290,7 @@ function TenderWorkspace() {
               {["SBD 1 — Invitation to Bid", "SBD 4 — Declaration of Interest", "SBD 6.1 — Preference Points Claim", "Pricing Schedule"].map((f) => (
                 <div key={f} className="flex items-center justify-between rounded-lg border border-border p-3">
                   <p className="text-sm font-medium">{f}</p>
-                  <Button size="sm" variant="outline" asChild><Link to="/filler">Fill in</Link></Button>
+                  <Button size="sm" variant="outline" asChild><Link to="/filler" search={{ tender: tender.id }}>Fill in</Link></Button>
                 </div>
               ))}
             </CardContent>
@@ -254,11 +313,11 @@ function TenderWorkspace() {
               ].map(([k, v]) => (
                 <div key={k} className="space-y-1.5">
                   <Label>{k}</Label>
-                  <Input defaultValue={v} />
+                  <Input value={field(k!, v!)} onChange={(e) => setField(k!, e.target.value)} />
                 </div>
               ))}
               </div>
-              <Button onClick={() => toast.success("Tender progress saved.")}>Save Changes</Button>
+              <Button disabled={saving} onClick={() => void save("Company information updated.")}>{saving ? "Saving…" : "Save Changes"}</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -342,10 +401,10 @@ function TenderWorkspace() {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-base">Quick reply</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <Input defaultValue={tender.contactEmail} />
-              <Input defaultValue={`Tender Submission — ${tender.reference}`} />
-              <Textarea rows={6} defaultValue={`Dear ${tender.contact},\n\nPlease find attached our submission for ${tender.reference}.\n\nKind regards,\nLufuno Mphela`} />
-              <Button onClick={() => toast.success("Email sent successfully.")}><Send className="size-4" /> Send</Button>
+              <Input value={reply.to} onChange={(e) => setReply((r) => ({ ...r, to: e.target.value }))} />
+              <Input value={reply.subject} onChange={(e) => setReply((r) => ({ ...r, subject: e.target.value }))} />
+              <Textarea rows={6} value={reply.body} onChange={(e) => setReply((r) => ({ ...r, body: e.target.value }))} />
+              <Button onClick={() => void sendReply()}><Send className="size-4" /> Send</Button>
             </CardContent>
           </Card>
         </TabsContent>
