@@ -114,16 +114,18 @@ ${templateLines}`;
 export const chatWithAssistant = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ChatInput.parse(input))
   .handler(async ({ data }) => {
-    const key = process.env["OPENROUTER_API_KEY"];
-    if (!key) {
-      return {
-        content: "The assistant is not connected yet — an OpenRouter API key still needs to be saved.",
-        actions: [] as AssistantAction[],
-      };
-    }
+    try {
+      const key = process.env["OPENROUTER_API_KEY"];
+      console.log("[assistant] key present:", Boolean(key));
+      if (!key) {
+        return {
+          content: "The assistant is not connected yet — an OpenRouter API key still needs to be saved.",
+          actions: [] as AssistantAction[],
+        };
+      }
 
-    const prompt = await systemPrompt();
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const prompt = await systemPrompt();
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
