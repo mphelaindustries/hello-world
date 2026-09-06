@@ -15,6 +15,8 @@ import {
   Radar,
   Search,
   Settings,
+  Sparkles,
+
   Wand2,
   X,
 } from "lucide-react";
