@@ -221,15 +221,30 @@ function AppLayout() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-80 p-0">
-                <div className="border-b border-border px-4 py-3 text-sm font-semibold">Notifications</div>
+                <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                  <span className="text-sm font-semibold">Notifications</span>
+                  <Button variant="ghost" size="sm" disabled={unreadCount === 0} onClick={() => void readAll()}>
+                    Mark all read
+                  </Button>
+                </div>
                 <ul className="max-h-80 divide-y divide-border overflow-y-auto">
                   {notifications.map((n) => (
-                    <li key={n.id} className="px-4 py-3">
-                      <p className="text-sm font-medium">{n.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>
+                    <li key={n.id}>
+                      <button
+                        type="button"
+                        onClick={() => void readOne(n.id)}
+                        className={cn(
+                          "w-full px-4 py-3 text-left hover:bg-accent",
+                          n.read && "opacity-60",
+                        )}
+                      >
+                        <p className="text-sm font-medium">{n.title}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>
+                      </button>
                     </li>
                   ))}
                 </ul>
+
               </PopoverContent>
             </Popover>
             <DropdownMenu>
