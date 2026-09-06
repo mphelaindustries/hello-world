@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/app/PageHeader";
-import { scraperRuns, scraperSources } from "@/data/mock";
+import { scraperRuns as mockScraperRuns, scraperSources as mockScraperSources } from "@/data/mock";
+import { getScraperRuns, getScraperSources, isFirebaseConfigured, runScraperNow, useLive } from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/scraper")({
   component: Scraper,
@@ -25,10 +26,20 @@ function Scraper() {
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { data: scraperSources } = useLive("scraperSources", getScraperSources, mockScraperSources);
+  const { data: scraperRuns, refresh } = useLive("scraperRuns", getScraperRuns, mockScraperRuns);
 
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
 
   const run = () => {
+    if (isFirebaseConfigured) {
+      setRunning(true);
+      runScraperNow()
+        .then((m) => { toast.success(m); refresh(); })
+        .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Could not start the scraper."))
+        .finally(() => setRunning(false));
+      return;
+    }
     setRunning(true);
     setDone(false);
     setProgress(0);
