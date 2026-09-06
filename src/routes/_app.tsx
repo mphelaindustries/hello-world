@@ -15,6 +15,8 @@ import {
   Radar,
   Search,
   Settings,
+  Sparkles,
+
   Wand2,
   X,
 } from "lucide-react";
@@ -39,7 +41,9 @@ export const Route = createFileRoute("/_app")({
 
 const mainNav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/assistant", label: "AI Assistant", icon: Sparkles },
   { to: "/tenders", label: "Tenders", icon: FileStack },
+
   { to: "/scraper", label: "Scraper", icon: Radar },
   { to: "/documents", label: "Documents", icon: FileText },
   { to: "/filler", label: "Tender Filler", icon: Wand2 },
