@@ -138,7 +138,7 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
         messages: [{ role: "system", content: prompt }, ...data.messages],
         tools: TOOLS,
         tool_choice: "auto",
-        max_tokens: 256,
+        max_tokens: 1024,
       }),
     });
 
