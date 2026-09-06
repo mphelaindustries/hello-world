@@ -235,14 +235,15 @@ export const runAssistantAction = createServerFn({ method: "POST" })
     // Try to execute against the real Firebase backend when it is configured.
     // If it is not ready, the demo responses below let the user see the flow.
     try {
+      const { ensureFirebase } = await import("@/lib/firebase");
+      const configured = await ensureFirebase();
       const {
-        isFirebaseConfigured,
         runScraperNow,
         sendTenderEmail,
         setTenderStatus,
       } = await import("@/lib/live-data");
 
-      if (isFirebaseConfigured) {
+      if (configured) {
         switch (data.name) {
           case "run_scraper": {
             const sources = args["sources"]

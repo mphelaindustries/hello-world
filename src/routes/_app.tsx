@@ -38,9 +38,13 @@ import {
   getNotifications, isFirebaseConfigured, markAllNotificationsRead, markNotificationRead,
   useLive, type LiveNotification,
 } from "@/lib/live-data";
+import { ensureFirebase } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app")({
+  // Initialise the Firebase client before any page renders so live-data
+  // reads/writes see the settled isFirebaseConfigured value.
+  loader: () => ensureFirebase(),
   component: AppLayout,
 });
 
