@@ -1,4 +1,5 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 import { ArrowLeft, Building2, CalendarDays, Download, FileText, MapPin, Paperclip, Send, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,10 @@ import { PageHeader } from "@/components/app/PageHeader";
 import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
 import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
 import { company, companyDocuments, daysUntil, experience, formatDate, tenders as mockTenders } from "@/data/mock";
-import { getCompanyDocuments, getCompanyProfile, getTender, useLive } from "@/lib/live-data";
+import {
+  getCompanyDocuments, getCompanyProfile, getTender, isFirebaseConfigured,
+  saveTenderProgress, sendTenderEmail, setRequirementDocument, useLive,
+} from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/tenders/$tenderId")({
   component: TenderWorkspace,
@@ -33,9 +37,10 @@ export const Route = createFileRoute("/_app/tenders/$tenderId")({
 
 function TenderWorkspace() {
   const tender = Route.useLoaderData();
+  const router = useRouter();
   const completed = tender.requirements.filter((r) => r.status === "COMPLETED").length;
   const total = tender.requirements.length;
-  const pct = Math.round((completed / total) * 100);
+  const pct = total ? Math.round((completed / total) * 100) : 0;
   const missing = tender.requirements.filter((r) => r.status !== "COMPLETED");
 
   const { data: profile } = useLive("company", getCompanyProfile, {
@@ -47,6 +52,60 @@ function TenderWorkspace() {
   const { data: documents } = useLive("documents", getCompanyDocuments, companyDocuments);
   const liveCompany = profile.company;
   const liveExperience = profile.experience;
+
+  const [saving, setSaving] = useState(false);
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const [reply, setReply] = useState({
+    to: tender.contactEmail,
+    subject: `Tender Submission — ${tender.reference}`,
+    body: `Dear ${tender.contact},\n\nPlease find attached our submission for ${tender.reference}.\n\nKind regards,\nLufuno Mphela`,
+  });
+
+  const field = (key: string, fallback: string) => fields[key] ?? fallback;
+  const setField = (key: string, value: string) => setFields((f) => ({ ...f, [key]: value }));
+
+  const notConnected = () =>
+    toast.error("Not saved — connect the backend first so changes can be stored.");
+
+  const save = async (message = "Tender progress saved.") => {
+    if (!isFirebaseConfigured) return notConnected();
+    setSaving(true);
+    try {
+      await saveTenderProgress(tender.id, { companyOverrides: fields }, message);
+      await router.invalidate();
+      toast.success(message);
+    } catch {
+      toast.error("Could not save — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const attach = async (requirementId: string, requirementName: string) => {
+    if (!isFirebaseConfigured) return notConnected();
+    const words = requirementName.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+    const match = documents.find((d) => words.some((w) => d.name.toLowerCase().includes(w))) ?? documents[0];
+    if (!match) return toast.error("No company documents available to attach.");
+    try {
+      await setRequirementDocument(tender.id, requirementId, match.name);
+      await router.invalidate();
+      toast.success(`${match.name} attached.`);
+    } catch {
+      toast.error("Could not attach the document.");
+    }
+  };
+
+  const sendReply = async () => {
+    if (!isFirebaseConfigured) return notConnected();
+    try {
+      const msg = await sendTenderEmail({ ...reply, tenderId: tender.id });
+      await router.invalidate();
+      toast.success(msg);
+    } catch {
+      toast.error("Could not send the email.");
+    }
+  };
+
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
