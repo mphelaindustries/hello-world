@@ -2,7 +2,8 @@
 // configured and falls back to the bundled demo data when it isn't (or when
 // the read fails). Pages keep their existing mock-shaped props either way.
 import {
-  collection, doc, getDoc, getDocs, orderBy, query, limit, updateDoc, where,
+  collection, doc, getDoc, getDocs, orderBy, query, limit, serverTimestamp,
+  setDoc, updateDoc, where, addDoc,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
