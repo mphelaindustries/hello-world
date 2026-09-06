@@ -63,8 +63,33 @@ function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { data: notifications } = useLive("notifications", getNotifications, mockNotifications);
+  const { data: notifications, refresh } = useLive("notifications", getNotifications, mockNotifications);
   const unreadCount = notifications.filter((n) => !("read" in n) || !n.read).length;
+
+  const readOne = async (id: string) => {
+    if (!isFirebaseConfigured) return;
+    try {
+      await markNotificationRead(id);
+      refresh();
+    } catch {
+      toast.error("Could not update that notification.");
+    }
+  };
+
+  const readAll = async () => {
+    if (!isFirebaseConfigured) {
+      toast.error("Connect the backend first so notifications can be updated.");
+      return;
+    }
+    try {
+      await markAllNotificationsRead(notifications.filter((n) => !n.read).map((n) => n.id));
+      refresh();
+      toast.success("All notifications marked as read.");
+    } catch {
+      toast.error("Could not update notifications.");
+    }
+  };
+
 
   const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
 
