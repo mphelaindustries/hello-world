@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/app/PageHeader";
 import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
-import { MatchScore, StatusBadge } from "@/components/app/StatusBadge";
+import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
 import { daysUntil, formatDate, tenders, type TenderStatus } from "@/data/mock";
 
 export const Route = createFileRoute("/_app/tenders/")({

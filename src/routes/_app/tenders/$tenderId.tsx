@@ -264,14 +264,14 @@ function TenderWorkspace() {
                   ["External works", "1", "Sum", "R 1 980 000", "R 1 980 000"],
                 ].map((row) => (
                   <MobileDetailDialog
-                    key={row[0]}
-                    title={row[0]}
-                    subtitle={row[4]}
+                    key={row[0] ?? "pricing-item"}
+                    title={row[0] ?? "Pricing item"}
+                    subtitle={row[4] ?? "—"}
                     details={[
-                      { label: "Quantity", value: row[1] },
-                      { label: "Unit", value: row[2] },
-                      { label: "Rate", value: row[3] },
-                      { label: "Amount", value: row[4] },
+                      { label: "Quantity", value: row[1] ?? "—" },
+                      { label: "Unit", value: row[2] ?? "—" },
+                      { label: "Rate", value: row[3] ?? "—" },
+                      { label: "Amount", value: row[4] ?? "—" },
                     ]}
                   />
                 ))}
