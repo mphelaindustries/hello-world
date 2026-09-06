@@ -241,7 +241,7 @@ function TenderFiller() {
             </div>
           )}
 
-          {step === 5 && <Declarations />}
+          {step === 5 && <Declarations onSave={() => void saveDraft()} />}
 
           {step === 6 && (
             <div className="space-y-3">
@@ -279,7 +279,7 @@ function TenderFiller() {
   );
 }
 
-function Declarations() {
+function Declarations({ onSave }: { onSave: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
 
@@ -346,7 +346,7 @@ function Declarations() {
           <Button size="sm" variant="outline" onClick={() => toast.success("Signature uploaded.")}>
             <Upload className="size-4" /> Upload Signature
           </Button>
-          <Button size="sm" onClick={() => toast.success("Declarations saved.")}><Check className="size-4" /> Save</Button>
+          <Button size="sm" onClick={onSave}><Check className="size-4" /> Save</Button>
         </div>
       </div>
     </div>
