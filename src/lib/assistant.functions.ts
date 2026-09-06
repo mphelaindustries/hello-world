@@ -77,53 +77,7 @@ const TOOLS = [
   },
 ];
 
-type Snapshot = {
-  company: { name: string; city: string; province: string; contactPerson: string; email: string };
-  tenders: { id: string; name: string; reference: string; organisation: string; location: string; closingDate: string; status: string; match: number }[];
-  documents: { name: string; category: string; status: string }[];
-  sources: { name: string; status: string }[];
-  templates: { title: string; subject: string }[];
-};
-
-async function loadSnapshot(): Promise<Snapshot> {
-  try {
-    const live = await import("@/lib/live-data");
-    if (live.isFirebaseConfigured) {
-      const [tenders, docs, profile, sources, templates] = await Promise.all([
-        live.getTenders(),
-        live.getCompanyDocuments(),
-        live.getCompanyProfile(),
-        live.getScraperSources(),
-        live.getEmailTemplates(),
-      ]);
-      return {
-        company: {
-          name: profile.company.name,
-          city: profile.company.city ?? "—",
-          province: profile.company.province ?? "—",
-          contactPerson: profile.company.contactPerson ?? "—",
-          email: profile.company.email ?? "—",
-        },
-        tenders: tenders.map((t) => ({ id: t.id, name: t.name, reference: t.reference, organisation: t.organisation, location: t.location, closingDate: t.closingDate, status: t.status, match: t.match })),
-        documents: docs.map((d) => ({ name: d.name, category: d.category, status: d.status })),
-        sources: sources.map((s) => ({ name: s.name, status: s.status })),
-        templates: templates.map((t) => ({ title: t.title, subject: t.subject })),
-      };
-    }
-  } catch {
-    // Firebase not configured or unavailable — fall back to the bundled demo data.
-  }
-  return {
-    company: { name: company.name, city: company.city, province: company.province, contactPerson: company.contactPerson, email: company.email },
-    tenders: tenders.map((t) => ({ id: t.id, name: t.name, reference: t.reference, organisation: t.organisation, location: t.location, closingDate: t.closingDate, status: t.status, match: t.match })),
-    documents: companyDocuments.map((d) => ({ name: d.name, category: d.category, status: d.status })),
-    sources: scraperSources.map((s) => ({ name: s.name, status: s.status })),
-    templates: emailTemplates.map((t) => ({ title: t.title, subject: t.subject })),
-  };
-}
-
 async function systemPrompt() {
-  const snapshot = await loadSnapshot();
 
   const tenderLines = snapshot.tenders
     .map(
