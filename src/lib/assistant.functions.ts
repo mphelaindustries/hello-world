@@ -144,7 +144,10 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
 
     if (!res.ok) {
       const detail = await res.text();
-      throw new Error(`Assistant unavailable (${res.status}): ${detail.slice(0, 300)}`);
+      return {
+        content: `The AI assistant could not answer right now (OpenRouter ${res.status}). ${detail.slice(0, 200)}`,
+        actions: [] as AssistantAction[],
+      };
     }
 
     const json = (await res.json()) as {
