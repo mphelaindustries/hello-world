@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/app/PageHeader";
-import { company, experience } from "@/data/mock";
+import { company as mockCompany, companyDocuments as mockDocuments, experience as mockExperience } from "@/data/mock";
+import { getCompanyDocuments, getCompanyProfile, useLive } from "@/lib/live-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/filler")({
@@ -36,7 +37,24 @@ const compliance = [
 
 function TenderFiller() {
   const [step, setStep] = useState(0);
+  const { data: profile } = useLive("company", getCompanyProfile, {
+    company: mockCompany,
+    directors: [],
+    certifications: [],
+    experience: mockExperience,
+  });
+  const { data: documents } = useLive("documents", getCompanyDocuments, mockDocuments);
+  const company = profile.company;
+  const experience = profile.experience;
   const [selectedProjects, setSelectedProjects] = useState<string[]>([experience[0]!.id, experience[2]!.id]);
+
+  const compliance = [
+    { name: "CIPC Registration", doc: documents.find((d) => d.name.toLowerCase().includes("cipc"))?.name ?? "CIPC.pdf", ok: true },
+    { name: "Tax Compliance", doc: documents.find((d) => d.name.toLowerCase().includes("tax"))?.name ?? "Tax-Compliance.pdf", ok: true },
+    { name: "B-BBEE", doc: documents.find((d) => d.name.toLowerCase().includes("bbbee"))?.name ?? "B-BBEE.pdf", ok: true },
+    { name: "Bank Confirmation", doc: documents.find((d) => d.name.toLowerCase().includes("bank"))?.name ?? "Bank-Confirmation.pdf", ok: true },
+    { name: "COIDA", doc: documents.find((d) => d.name.toLowerCase().includes("coida"))?.name ?? "Missing", ok: false },
+  ];
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">

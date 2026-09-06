@@ -32,7 +32,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { notifications } from "@/data/mock";
+import { notifications as mockNotifications } from "@/data/mock";
+import { getNotifications, useLive } from "@/lib/live-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app")({
@@ -62,6 +63,8 @@ function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { data: notifications } = useLive("notifications", getNotifications, mockNotifications);
+  const unreadCount = notifications.filter((n) => !("read" in n) || !n.read).length;
 
   const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
 
@@ -181,9 +184,11 @@ function AppLayout() {
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
                   <Bell className="size-5" />
-                  <span className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-                    5
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-80 p-0">

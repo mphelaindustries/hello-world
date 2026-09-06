@@ -11,12 +11,13 @@ import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/app/PageHeader";
 import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
 import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
-import { company, companyDocuments, daysUntil, experience, formatDate, tenders } from "@/data/mock";
+import { company, companyDocuments, daysUntil, experience, formatDate, tenders as mockTenders } from "@/data/mock";
+import { getCompanyDocuments, getCompanyProfile, getTender, useLive } from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/tenders/$tenderId")({
   component: TenderWorkspace,
-  loader: ({ params }) => {
-    const tender = tenders.find((t) => t.id === params.tenderId);
+  loader: async ({ params }) => {
+    const tender = await getTender(params.tenderId);
     if (!tender) throw notFound();
     return tender;
   },
@@ -36,6 +37,16 @@ function TenderWorkspace() {
   const total = tender.requirements.length;
   const pct = Math.round((completed / total) * 100);
   const missing = tender.requirements.filter((r) => r.status !== "COMPLETED");
+
+  const { data: profile } = useLive("company", getCompanyProfile, {
+    company,
+    directors: [],
+    certifications: [],
+    experience,
+  });
+  const { data: documents } = useLive("documents", getCompanyDocuments, companyDocuments);
+  const liveCompany = profile.company;
+  const liveExperience = profile.experience;
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
@@ -198,7 +209,7 @@ function TenderWorkspace() {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-base">Attached company documents</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {companyDocuments.slice(0, 6).map((d) => (
+              {documents.slice(0, 6).map((d) => (
                 <div key={d.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                   <div>
                     <p className="text-sm font-medium">{d.name}</p>
@@ -233,19 +244,19 @@ function TenderWorkspace() {
             <CardContent className="space-y-4">
               <p className="rounded-md bg-success/10 px-3 py-2 text-sm text-success">✓ Information pulled from Company Profile</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                {[
-                  ["Company Name", company.name],
-                  ["Registration Number", company.registrationNumber],
-                  ["VAT Number", company.vatNumber],
-                  ["Address", company.physicalAddress],
-                  ["Contact Person", company.contactPerson],
-                  ["Email", company.email],
-                ].map(([k, v]) => (
-                  <div key={k} className="space-y-1.5">
-                    <Label>{k}</Label>
-                    <Input defaultValue={v} />
-                  </div>
-                ))}
+              {[
+                ["Company Name", liveCompany.name],
+                ["Registration Number", liveCompany.registrationNumber],
+                ["VAT Number", liveCompany.vatNumber],
+                ["Address", liveCompany.physicalAddress],
+                ["Contact Person", liveCompany.contactPerson],
+                ["Email", liveCompany.email],
+              ].map(([k, v]) => (
+                <div key={k} className="space-y-1.5">
+                  <Label>{k}</Label>
+                  <Input defaultValue={v} />
+                </div>
+              ))}
               </div>
               <Button onClick={() => toast.success("Tender progress saved.")}>Save Changes</Button>
             </CardContent>
@@ -367,7 +378,7 @@ function TenderWorkspace() {
                 </div>
               ))}
               <p className="pt-2 text-xs text-muted-foreground">
-                Reusable experience on file: {experience.length} projects
+                Reusable experience on file: {liveExperience.length} projects
               </p>
             </CardContent>
           </Card>

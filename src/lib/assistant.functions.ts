@@ -1,6 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { company, companyDocuments, emailTemplates, scraperSources, tenders } from "@/data/mock";
+import {
+  company,
+  companyDocuments,
+  emailTemplates,
+  scraperSources,
+  tenders,
+  type TenderStatus,
+} from "@/data/mock";
 
 const MODEL = "anthropic/claude-3.5-sonnet";
 
@@ -70,26 +77,73 @@ const TOOLS = [
   },
 ];
 
-function systemPrompt() {
-  const tenderLines = tenders
+type Snapshot = {
+  company: { name: string; city: string; province: string; contactPerson: string; email: string };
+  tenders: { id: string; name: string; reference: string; organisation: string; location: string; closingDate: string; status: string; match: number }[];
+  documents: { name: string; category: string; status: string }[];
+  sources: { name: string; status: string }[];
+  templates: { title: string; subject: string }[];
+};
+
+async function loadSnapshot(): Promise<Snapshot> {
+  try {
+    const live = await import("@/lib/live-data");
+    if (live.isFirebaseConfigured) {
+      const [tenders, docs, profile, sources, templates] = await Promise.all([
+        live.getTenders(),
+        live.getCompanyDocuments(),
+        live.getCompanyProfile(),
+        live.getScraperSources(),
+        live.getEmailTemplates(),
+      ]);
+      return {
+        company: {
+          name: profile.company.name,
+          city: profile.company.city ?? "—",
+          province: profile.company.province ?? "—",
+          contactPerson: profile.company.contactPerson ?? "—",
+          email: profile.company.email ?? "—",
+        },
+        tenders: tenders.map((t) => ({ id: t.id, name: t.name, reference: t.reference, organisation: t.organisation, location: t.location, closingDate: t.closingDate, status: t.status, match: t.match })),
+        documents: docs.map((d) => ({ name: d.name, category: d.category, status: d.status })),
+        sources: sources.map((s) => ({ name: s.name, status: s.status })),
+        templates: templates.map((t) => ({ title: t.title, subject: t.subject })),
+      };
+    }
+  } catch {
+    // Firebase not configured or unavailable — fall back to the bundled demo data.
+  }
+  return {
+    company: { name: company.name, city: company.city, province: company.province, contactPerson: company.contactPerson, email: company.email },
+    tenders: tenders.map((t) => ({ id: t.id, name: t.name, reference: t.reference, organisation: t.organisation, location: t.location, closingDate: t.closingDate, status: t.status, match: t.match })),
+    documents: companyDocuments.map((d) => ({ name: d.name, category: d.category, status: d.status })),
+    sources: scraperSources.map((s) => ({ name: s.name, status: s.status })),
+    templates: emailTemplates.map((t) => ({ title: t.title, subject: t.subject })),
+  };
+}
+
+async function systemPrompt() {
+  const snapshot = await loadSnapshot();
+
+  const tenderLines = snapshot.tenders
     .map(
       (t) =>
         `- ${t.id} | ${t.name} | ref ${t.reference} | ${t.organisation} | ${t.location} | closes ${t.closingDate} | status ${t.status} | match ${t.match}%`,
     )
     .join("\n");
 
-  const docLines = companyDocuments.map((d) => `- ${d.name} (${d.category}, ${d.status})`).join("\n");
-  const sourceLines = scraperSources.map((s) => `- ${s.name} (${s.status})`).join("\n");
-  const templateLines = emailTemplates.map((t) => `- ${t.title}: ${t.subject}`).join("\n");
+  const docLines = snapshot.documents.map((d) => `- ${d.name} (${d.category}, ${d.status})`).join("\n");
+  const sourceLines = snapshot.sources.map((s) => `- ${s.name} (${s.status})`).join("\n");
+  const templateLines = snapshot.templates.map((t) => `- ${t.title}: ${t.subject}`).join("\n");
 
-  return `You are the Tender OS assistant for ${company.name}, a South African company that bids on public tenders.
+  return `You are the Tender OS assistant for ${snapshot.company.name}, a South African company that bids on public tenders.
 
 You know the whole system: tender pipeline, document vault, company profile, email templates, scraper sources and reports. Answer briefly and practically, in plain business English. Use markdown for lists and tables.
 
 You can take actions with the provided tools. Never claim an action is already done — every action must be confirmed by the user first, so describe what you are proposing.
 
 COMPANY
-${company.name} · ${company.city}, ${company.province} · contact ${company.contactPerson} (${company.email})
+${snapshot.company.name} · ${snapshot.company.city}, ${snapshot.company.province} · contact ${snapshot.company.contactPerson} (${snapshot.company.email})
 
 TENDERS
 ${tenderLines}
@@ -115,15 +169,18 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
       };
     }
 
+    const prompt = await systemPrompt();
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         authorization: `Bearer ${key}`,
         "content-type": "application/json",
+        "HTTP-Referer": "https://tender-os.lovable.app",
+        "X-Title": "Tender OS",
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: [{ role: "system", content: systemPrompt() }, ...data.messages],
+        messages: [{ role: "system", content: prompt }, ...data.messages],
         tools: TOOLS,
         tool_choice: "auto",
       }),
@@ -194,7 +251,45 @@ export const runAssistantAction = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ActionInput.parse(input))
   .handler(async ({ data }) => {
     const args = safeParse(data.argsJson);
-    // Actions run against the demo data until the Firebase backend is connected.
+
+    // Try to execute against the real Firebase backend when it is configured.
+    // If it is not ready, the demo responses below let the user see the flow.
+    try {
+      const {
+        isFirebaseConfigured,
+        runScraperNow,
+        sendTenderEmail,
+        setTenderStatus,
+      } = await import("@/lib/live-data");
+
+      if (isFirebaseConfigured) {
+        switch (data.name) {
+          case "run_scraper": {
+            const sources = args["sources"]
+              ? args["sources"].split(",").map((s) => s.trim()).filter(Boolean)
+              : undefined;
+            const message = await runScraperNow(sources);
+            return { ok: true, message };
+          }
+          case "send_email": {
+            const message = await sendTenderEmail({
+              to: args["to"] ?? "",
+              subject: args["subject"] ?? "",
+              body: args["body"] ?? "",
+              ...(args["tenderId"] ? { tenderId: args["tenderId"] } : {}),
+            });
+            return { ok: true, message };
+          }
+          case "update_tender_status": {
+            await setTenderStatus(args["tenderId"] ?? "", args["status"] as TenderStatus);
+            return { ok: true, message: `Status updated to ${args["status"] ?? ""}.` };
+          }
+        }
+      }
+    } catch {
+      // Backend not reachable yet — fall through to the demo response.
+    }
+
     switch (data.name) {
       case "run_scraper":
         return { ok: true, message: "Scraper run started. New tenders will appear on the Tenders page." };
