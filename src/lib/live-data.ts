@@ -273,7 +273,15 @@ export async function getScraperRuns() {
   }
 }
 
-export async function getNotifications() {
+export type LiveNotification = {
+  id: string;
+  title: string;
+  body: string;
+  tone: "urgent" | "warning" | "info" | "success";
+  read?: boolean;
+};
+
+export async function getNotifications(): Promise<LiveNotification[]> {
   if (!isFirebaseConfigured) return mockNotifications;
   try {
     const snap = await getDocs(query(collection(getDb(), "notifications"), orderBy("createdAt", "desc"), limit(20)));
@@ -285,6 +293,7 @@ export async function getNotifications() {
         title: (x["title"] as string) ?? "Notification",
         body: (x["body"] as string) ?? "",
         tone: (type === "deadline" ? "urgent" : type === "document" ? "warning" : type === "match" ? "success" : "info") as "urgent" | "warning" | "info" | "success",
+        read: Boolean(x["read"]),
       };
     });
   } catch {
@@ -300,7 +309,82 @@ function requireConfigured() {
 
 export async function setTenderStatus(id: string, status: TenderStatus) {
   requireConfigured();
-  await updateDoc(doc(getDb(), "tenders", id), { status });
+  await updateDoc(doc(getDb(), "tenders", id), { status, updatedAt: serverTimestamp() });
+  await addTenderActivity(id, `Status changed to ${status}.`);
+}
+
+/** Append a line to the tender's activity trail. Never throws. */
+export async function addTenderActivity(tenderId: string, message: string) {
+  if (!isFirebaseConfigured) return;
+  try {
+    await addDoc(collection(getDb(), "tenders", tenderId, "activity"), {
+      message,
+      createdAt: serverTimestamp(),
+    });
+  } catch {
+    // activity is best-effort
+  }
+}
+
+/** Save edited workspace fields (company overrides, notes, pricing) onto the tender. */
+export async function saveTenderProgress(
+  tenderId: string,
+  fields: Record<string, unknown>,
+  activityMessage = "Tender progress saved.",
+) {
+  requireConfigured();
+  await setDoc(
+    doc(getDb(), "tenders", tenderId),
+    { ...fields, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  await addTenderActivity(tenderId, activityMessage);
+}
+
+/** Attach / replace the company document linked to a tender requirement. */
+export async function setRequirementDocument(
+  tenderId: string,
+  requirementId: string,
+  documentName: string,
+) {
+  requireConfigured();
+  await setDoc(
+    doc(getDb(), "tenders", tenderId, "requirements", requirementId),
+    { note: documentName, met: true, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  await addTenderActivity(tenderId, `${documentName} attached to a requirement.`);
+}
+
+/** Save the multi-step form filler answers against a tender. */
+export async function saveTenderDraft(tenderId: string, draft: Record<string, unknown>) {
+  requireConfigured();
+  await setDoc(
+    doc(getDb(), "tenders", tenderId, "drafts", "filler"),
+    { ...draft, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  await addTenderActivity(tenderId, "Tender filler progress saved.");
+}
+
+export async function getTenderDraft(tenderId: string): Promise<Record<string, unknown> | null> {
+  if (!isFirebaseConfigured) return null;
+  try {
+    const snap = await getDoc(doc(getDb(), "tenders", tenderId, "drafts", "filler"));
+    return snap.exists() ? (snap.data() as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function markNotificationRead(id: string) {
+  requireConfigured();
+  await setDoc(doc(getDb(), "notifications", id), { read: true }, { merge: true });
+}
+
+export async function markAllNotificationsRead(ids: string[]) {
+  requireConfigured();
+  await Promise.all(ids.map((id) => setDoc(doc(getDb(), "notifications", id), { read: true }, { merge: true })));
 }
 
 export async function runScraperNow(sources?: string[]): Promise<string> {
