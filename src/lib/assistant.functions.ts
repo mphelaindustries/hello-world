@@ -10,6 +10,7 @@ import {
 } from "@/data/mock";
 
 const MODEL = "google/gemma-4-26b-a4b-it:free";
+const FALLBACK_MODELS = ["google/gemma-4-31b-it:free"];
 
 const ChatInput = z.object({
   messages: z
