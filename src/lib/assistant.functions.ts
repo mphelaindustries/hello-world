@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { companyProfile, documents, emailTemplates, scraperSources, tenders } from "@/data/mock";
+import { company, companyDocuments, emailTemplates, scraperSources, tenders } from "@/data/mock";
 
 const MODEL = "anthropic/claude-3.5-sonnet";
 
@@ -19,7 +19,7 @@ export type AssistantAction = {
   id: string;
   name: string;
   label: string;
-  args: Record<string, unknown>;
+  argsJson: string;
 };
 
 const TOOLS = [
@@ -31,7 +31,7 @@ const TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          sources: { type: "array", items: { type: "string" }, description: "Optional source ids to scan." },
+          sources: { type: "array", items: { type: "string" }, description: "Optional source names to scan." },
         },
       },
     },
@@ -78,18 +78,18 @@ function systemPrompt() {
     )
     .join("\n");
 
-  const docLines = documents.map((d) => `- ${d.name} (${d.category}, ${d.status})`).join("\n");
-  const sourceLines = scraperSources.map((s) => `- ${s.id}: ${s.name}`).join("\n");
-  const templateLines = emailTemplates.map((t) => `- ${t.id}: ${t.name}`).join("\n");
+  const docLines = companyDocuments.map((d) => `- ${d.name} (${d.category}, ${d.status})`).join("\n");
+  const sourceLines = scraperSources.map((s) => `- ${s.name} (${s.status})`).join("\n");
+  const templateLines = emailTemplates.map((t) => `- ${t.title}: ${t.subject}`).join("\n");
 
-  return `You are the Tender OS assistant for ${companyProfile.name}, a South African company that bids on public tenders.
+  return `You are the Tender OS assistant for ${company.name}, a South African company that bids on public tenders.
 
 You know the whole system: tender pipeline, document vault, company profile, email templates, scraper sources and reports. Answer briefly and practically, in plain business English. Use markdown for lists and tables.
 
-You can take actions with the provided tools. Never claim an action is done — every action must be confirmed by the user first, so describe what you are proposing.
+You can take actions with the provided tools. Never claim an action is already done — every action must be confirmed by the user first, so describe what you are proposing.
 
 COMPANY
-${companyProfile.name} · CIDB ${companyProfile.cidbGrading} · B-BBEE Level ${companyProfile.bbbeeLevel} · ${companyProfile.province}
+${company.name} · ${company.city}, ${company.province} · contact ${company.contactPerson} (${company.email})
 
 TENDERS
 ${tenderLines}
@@ -145,36 +145,41 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
 
     const message = json.choices?.[0]?.message;
     const actions: AssistantAction[] = (message?.tool_calls ?? []).map((call) => {
-      let args: Record<string, unknown> = {};
-      try {
-        args = JSON.parse(call.function.arguments || "{}");
-      } catch {
-        args = {};
-      }
+      const argsJson = call.function.arguments || "{}";
       return {
         id: call.id,
         name: call.function.name,
-        label: describeAction(call.function.name, args),
-        args,
+        label: describeAction(call.function.name, safeParse(argsJson)),
+        argsJson,
       };
     });
 
     return {
-      content: message?.content?.trim() || (actions.length ? "I can do that — confirm below." : "I did not get a reply."),
+      content:
+        message?.content?.trim() || (actions.length ? "I can do that — confirm below." : "I did not get a reply."),
       actions,
     };
   });
 
-function describeAction(name: string, args: Record<string, unknown>) {
+function safeParse(json: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed)) out[k] = Array.isArray(v) ? v.join(", ") : String(v ?? "");
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function describeAction(name: string, args: Record<string, string>) {
   switch (name) {
     case "run_scraper":
-      return Array.isArray(args.sources) && args.sources.length
-        ? `Run the scraper on ${(args.sources as string[]).join(", ")}`
-        : "Run the scraper on all sources";
+      return args["sources"] ? `Run the scraper on ${args["sources"]}` : "Run the scraper on all sources";
     case "send_email":
-      return `Send an email to ${String(args.to ?? "")} — "${String(args.subject ?? "")}"`;
+      return `Send an email to ${args["to"] ?? ""} — "${args["subject"] ?? ""}"`;
     case "update_tender_status":
-      return `Set ${String(args.tenderId ?? "")} status to ${String(args.status ?? "")}`;
+      return `Set ${args["tenderId"] ?? ""} status to ${args["status"] ?? ""}`;
     default:
       return name;
   }
@@ -182,20 +187,21 @@ function describeAction(name: string, args: Record<string, unknown>) {
 
 const ActionInput = z.object({
   name: z.string(),
-  args: z.record(z.string(), z.unknown()).default({}),
+  argsJson: z.string().default("{}"),
 });
 
 export const runAssistantAction = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ActionInput.parse(input))
   .handler(async ({ data }) => {
+    const args = safeParse(data.argsJson);
     // Actions run against the demo data until the Firebase backend is connected.
     switch (data.name) {
       case "run_scraper":
         return { ok: true, message: "Scraper run started. New tenders will appear on the Tenders page." };
       case "send_email":
-        return { ok: true, message: `Email queued to ${String(data.args.to ?? "")}.` };
+        return { ok: true, message: `Email queued to ${args["to"] ?? ""}.` };
       case "update_tender_status":
-        return { ok: true, message: `Status updated to ${String(data.args.status ?? "")}.` };
+        return { ok: true, message: `Status updated to ${args["status"] ?? ""}.` };
       default:
         return { ok: false, message: `Unknown action: ${data.name}` };
     }
