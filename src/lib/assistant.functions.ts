@@ -9,7 +9,7 @@ import {
   type TenderStatus,
 } from "@/data/mock";
 
-const MODEL = "anthropic/claude-fable-5.1";
+const MODEL = "google/gemma-4-26b-a4b-it:free";
 
 const ChatInput = z.object({
   messages: z
