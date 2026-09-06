@@ -38,6 +38,7 @@ import {
   getNotifications, isFirebaseConfigured, markAllNotificationsRead, markNotificationRead,
   useLive, type LiveNotification,
 } from "@/lib/live-data";
+import { ensureFirebase } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app")({
