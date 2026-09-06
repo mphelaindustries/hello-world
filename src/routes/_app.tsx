@@ -168,7 +168,7 @@ function AppLayout() {
           <button className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu className="size-5" />
           </button>
-          <div className="relative max-w-md flex-1">
+          <div className="relative min-w-0 max-w-md flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="pl-9" placeholder="Search tenders, documents, references..." />
           </div>
@@ -197,7 +197,7 @@ function AppLayout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent">
-                  <span className="grid size-8 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                     LM
                   </span>
                   <span className="hidden text-left sm:block">
@@ -220,7 +220,7 @@ function AppLayout() {
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>
