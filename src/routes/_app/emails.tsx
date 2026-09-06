@@ -78,11 +78,11 @@ function Emails() {
           <CardContent className="space-y-4">
             <p className="text-sm leading-relaxed text-muted-foreground">{active.preview}</p>
             <div className="space-y-3 border-t border-border pt-4">
-              <Input placeholder="To" defaultValue="tenders@dpw.gov.za" />
-              <Input placeholder="Subject" defaultValue={`Re: ${active.subject}`} />
-              <Textarea rows={8} defaultValue={"Dear Sir/Madam,\n\nThank you for your correspondence.\n\nKind regards,\nLufuno Mphela\nMphela Industries"} />
+              <Input placeholder="To" value={to} onChange={(e) => setTo(e.target.value)} />
+              <Input placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+              <Textarea rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => toast.success("Email sent successfully.")}><Send className="size-4" /> Send</Button>
+                <Button onClick={send}><Send className="size-4" /> Send</Button>
                 <Button variant="outline" onClick={() => toast.success("Email saved as draft.")}>Save Draft</Button>
                 <Button variant="outline" onClick={() => toast.success("Submission package attached.")}>
                   <Paperclip className="size-4" /> Attach package
