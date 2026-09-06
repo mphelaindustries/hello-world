@@ -71,8 +71,33 @@ function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const { user, loading: authLoading, demoMode } = useAuth();
   const { data: notifications, refresh } = useLive<LiveNotification[]>("notifications", getNotifications, mockNotifications);
   const unreadCount = notifications.filter((n) => !("read" in n) || !n.read).length;
+
+  useEffect(() => {
+    if (!authLoading && !demoMode && !user) {
+      void navigate({ to: "/login", search: { redirect: pathname }, replace: true });
+    }
+  }, [authLoading, demoMode, user, navigate, pathname]);
+
+  const displayName = user?.displayName ?? user?.email ?? "Lufuno Mphela";
+  const initials = displayName
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join("");
+
+  const logOut = async () => {
+    try {
+      await signOutUser();
+      await navigate({ to: "/login", replace: true });
+    } catch {
+      toast.error("Could not sign out. Please try again.");
+    }
+  };
 
   const readOne = async (id: string) => {
     if (!isFirebaseConfigured) return;
