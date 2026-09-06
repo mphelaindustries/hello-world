@@ -9,50 +9,330 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppCompanyRouteImport } from './routes/_app/company'
+import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
+import { Route as AppEmailsRouteImport } from './routes/_app/emails'
+import { Route as AppFillerRouteImport } from './routes/_app/filler'
+import { Route as AppHelpRouteImport } from './routes/_app/help'
+import { Route as AppReportsRouteImport } from './routes/_app/reports'
+import { Route as AppScraperRouteImport } from './routes/_app/scraper'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
+import { Route as AppTendersIndexRouteImport } from './routes/_app/tenders/index'
+import { Route as AppTendersTenderIdRouteImport } from './routes/_app/tenders/$tenderId'
+import { Route as AppTendersNewRouteImport } from './routes/_app/tenders/new'
 
-const IndexRoute = IndexRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCompanyRoute = AppCompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocumentsRoute = AppDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEmailsRoute = AppEmailsRouteImport.update({
+  id: '/emails',
+  path: '/emails',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFillerRoute = AppFillerRouteImport.update({
+  id: '/filler',
+  path: '/filler',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHelpRoute = AppHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppScraperRoute = AppScraperRouteImport.update({
+  id: '/scraper',
+  path: '/scraper',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTemplatesRoute = AppTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTendersIndexRoute = AppTendersIndexRouteImport.update({
+  id: '/tenders/',
+  path: '/tenders/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTendersTenderIdRoute = AppTendersTenderIdRouteImport.update({
+  id: '/tenders/$tenderId',
+  path: '/tenders/$tenderId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTendersNewRoute = AppTendersNewRouteImport.update({
+  id: '/tenders/new',
+  path: '/tenders/new',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
+  '/company': typeof AppCompanyRoute
+  '/documents': typeof AppDocumentsRoute
+  '/emails': typeof AppEmailsRoute
+  '/filler': typeof AppFillerRoute
+  '/help': typeof AppHelpRoute
+  '/reports': typeof AppReportsRoute
+  '/scraper': typeof AppScraperRoute
+  '/settings': typeof AppSettingsRoute
+  '/templates': typeof AppTemplatesRoute
+  '/tenders/$tenderId': typeof AppTendersTenderIdRoute
+  '/tenders/new': typeof AppTendersNewRoute
+  '/tenders/': typeof AppTendersIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/company': typeof AppCompanyRoute
+  '/documents': typeof AppDocumentsRoute
+  '/emails': typeof AppEmailsRoute
+  '/filler': typeof AppFillerRoute
+  '/help': typeof AppHelpRoute
+  '/reports': typeof AppReportsRoute
+  '/scraper': typeof AppScraperRoute
+  '/settings': typeof AppSettingsRoute
+  '/templates': typeof AppTemplatesRoute
+  '/': typeof AppIndexRoute
+  '/tenders/$tenderId': typeof AppTendersTenderIdRoute
+  '/tenders/new': typeof AppTendersNewRoute
+  '/tenders': typeof AppTendersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/company': typeof AppCompanyRoute
+  '/_app/documents': typeof AppDocumentsRoute
+  '/_app/emails': typeof AppEmailsRoute
+  '/_app/filler': typeof AppFillerRoute
+  '/_app/help': typeof AppHelpRoute
+  '/_app/reports': typeof AppReportsRoute
+  '/_app/scraper': typeof AppScraperRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/templates': typeof AppTemplatesRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/tenders/$tenderId': typeof AppTendersTenderIdRoute
+  '/_app/tenders/new': typeof AppTendersNewRoute
+  '/_app/tenders/': typeof AppTendersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/company'
+    | '/documents'
+    | '/emails'
+    | '/filler'
+    | '/help'
+    | '/reports'
+    | '/scraper'
+    | '/settings'
+    | '/templates'
+    | '/tenders/$tenderId'
+    | '/tenders/new'
+    | '/tenders/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/company'
+    | '/documents'
+    | '/emails'
+    | '/filler'
+    | '/help'
+    | '/reports'
+    | '/scraper'
+    | '/settings'
+    | '/templates'
+    | '/'
+    | '/tenders/$tenderId'
+    | '/tenders/new'
+    | '/tenders'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_app/company'
+    | '/_app/documents'
+    | '/_app/emails'
+    | '/_app/filler'
+    | '/_app/help'
+    | '/_app/reports'
+    | '/_app/scraper'
+    | '/_app/settings'
+    | '/_app/templates'
+    | '/_app/'
+    | '/_app/tenders/$tenderId'
+    | '/_app/tenders/new'
+    | '/_app/tenders/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/company': {
+      id: '/_app/company'
+      path: '/company'
+      fullPath: '/company'
+      preLoaderRoute: typeof AppCompanyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/documents': {
+      id: '/_app/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AppDocumentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/emails': {
+      id: '/_app/emails'
+      path: '/emails'
+      fullPath: '/emails'
+      preLoaderRoute: typeof AppEmailsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/filler': {
+      id: '/_app/filler'
+      path: '/filler'
+      fullPath: '/filler'
+      preLoaderRoute: typeof AppFillerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/help': {
+      id: '/_app/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof AppHelpRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/scraper': {
+      id: '/_app/scraper'
+      path: '/scraper'
+      fullPath: '/scraper'
+      preLoaderRoute: typeof AppScraperRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/templates': {
+      id: '/_app/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AppTemplatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tenders/': {
+      id: '/_app/tenders/'
+      path: '/tenders'
+      fullPath: '/tenders/'
+      preLoaderRoute: typeof AppTendersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tenders/$tenderId': {
+      id: '/_app/tenders/$tenderId'
+      path: '/tenders/$tenderId'
+      fullPath: '/tenders/$tenderId'
+      preLoaderRoute: typeof AppTendersTenderIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tenders/new': {
+      id: '/_app/tenders/new'
+      path: '/tenders/new'
+      fullPath: '/tenders/new'
+      preLoaderRoute: typeof AppTendersNewRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppCompanyRoute: typeof AppCompanyRoute
+  AppDocumentsRoute: typeof AppDocumentsRoute
+  AppEmailsRoute: typeof AppEmailsRoute
+  AppFillerRoute: typeof AppFillerRoute
+  AppHelpRoute: typeof AppHelpRoute
+  AppReportsRoute: typeof AppReportsRoute
+  AppScraperRoute: typeof AppScraperRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppTemplatesRoute: typeof AppTemplatesRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppTendersTenderIdRoute: typeof AppTendersTenderIdRoute
+  AppTendersNewRoute: typeof AppTendersNewRoute
+  AppTendersIndexRoute: typeof AppTendersIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppCompanyRoute: AppCompanyRoute,
+  AppDocumentsRoute: AppDocumentsRoute,
+  AppEmailsRoute: AppEmailsRoute,
+  AppFillerRoute: AppFillerRoute,
+  AppHelpRoute: AppHelpRoute,
+  AppReportsRoute: AppReportsRoute,
+  AppScraperRoute: AppScraperRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppTemplatesRoute: AppTemplatesRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppTendersTenderIdRoute: AppTendersTenderIdRoute,
+  AppTendersNewRoute: AppTendersNewRoute,
+  AppTendersIndexRoute: AppTendersIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
