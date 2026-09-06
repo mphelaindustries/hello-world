@@ -78,26 +78,25 @@ const TOOLS = [
 ];
 
 async function systemPrompt() {
-
-  const tenderLines = snapshot.tenders
+  const tenderLines = tenders
     .map(
       (t) =>
         `- ${t.id} | ${t.name} | ref ${t.reference} | ${t.organisation} | ${t.location} | closes ${t.closingDate} | status ${t.status} | match ${t.match}%`,
     )
     .join("\n");
 
-  const docLines = snapshot.documents.map((d) => `- ${d.name} (${d.category}, ${d.status})`).join("\n");
-  const sourceLines = snapshot.sources.map((s) => `- ${s.name} (${s.status})`).join("\n");
-  const templateLines = snapshot.templates.map((t) => `- ${t.title}: ${t.subject}`).join("\n");
+  const docLines = companyDocuments.map((d) => `- ${d.name} (${d.category}, ${d.status})`).join("\n");
+  const sourceLines = scraperSources.map((s) => `- ${s.name} (${s.status})`).join("\n");
+  const templateLines = emailTemplates.map((t) => `- ${t.title}: ${t.subject}`).join("\n");
 
-  return `You are the Tender OS assistant for ${snapshot.company.name}, a South African company that bids on public tenders.
+  return `You are the Tender OS assistant for ${company.name}, a South African company that bids on public tenders.
 
 You know the whole system: tender pipeline, document vault, company profile, email templates, scraper sources and reports. Answer briefly and practically, in plain business English. Use markdown for lists and tables.
 
 You can take actions with the provided tools. Never claim an action is already done — every action must be confirmed by the user first, so describe what you are proposing.
 
 COMPANY
-${snapshot.company.name} · ${snapshot.company.city}, ${snapshot.company.province} · contact ${snapshot.company.contactPerson} (${snapshot.company.email})
+${company.name} · ${company.city}, ${company.province} · contact ${company.contactPerson} (${company.email})
 
 TENDERS
 ${tenderLines}
