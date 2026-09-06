@@ -20,6 +20,7 @@ export const Route = createFileRoute("/_app/templates")({
 });
 
 function Templates() {
+  const { data: emailTemplates } = useLive("templates", getEmailTemplates, mockEmailTemplates);
   return (
     <div className="mx-auto max-w-[1200px] space-y-6">
       <PageHeader

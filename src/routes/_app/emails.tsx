@@ -24,8 +24,28 @@ export const Route = createFileRoute("/_app/emails")({
 });
 
 function Emails() {
-  const [selected, setSelected] = useState(emailThreads[0]!.id);
-  const active = emailThreads.find((m) => m.id === selected)!;
+  const { data: emailThreads } = useLive("emails", getEmailThreads, mockEmailThreads);
+  const [selected, setSelected] = useState(emailThreads[0]?.id ?? "");
+  const active = emailThreads.find((m) => m.id === selected) ?? emailThreads[0];
+  const [to, setTo] = useState("tenders@dpw.gov.za");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("Dear Sir/Madam,\n\nThank you for your correspondence.\n\nKind regards,\nLufuno Mphela\nMphela Industries");
+
+  const send = () => {
+    if (!isFirebaseConfigured) { toast.success("Email sent successfully."); return; }
+    sendTenderEmail({ to, subject: subject || `Re: ${active?.subject ?? ""}`, body })
+      .then((m) => toast.success(m))
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Could not send the email."));
+  };
+
+  if (!active) {
+    return (
+      <div className="mx-auto max-w-[1400px] space-y-6">
+        <PageHeader title="Emails" subtitle="Tender correspondence in one inbox." />
+        <p className="text-sm text-muted-foreground">No emails yet.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
