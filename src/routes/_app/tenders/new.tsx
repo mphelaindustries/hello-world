@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/app/PageHeader";
 import { MatchScore } from "@/components/app/StatusBadge";
-import { formatDate, tenders } from "@/data/mock";
+import { formatDate, tenders as mockTenders } from "@/data/mock";
+import { getTenders, isFirebaseConfigured, setTenderStatus, useLive } from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/tenders/new")({
   component: NewTenders,
@@ -22,7 +23,17 @@ export const Route = createFileRoute("/_app/tenders/new")({
 
 function NewTenders() {
   const [handled, setHandled] = useState<Record<string, string>>({});
+  const { data: tenders, refresh } = useLive("tenders", getTenders, mockTenders);
   const list = tenders.filter((t) => t.status === "NEW");
+
+  const mark = (id: string, status: "RELEVANT" | "ARCHIVED", message: string) => {
+    setHandled((h) => ({ ...h, [id]: message }));
+    if (isFirebaseConfigured) {
+      setTenderStatus(id, status)
+        .then(() => refresh())
+        .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Could not update the tender."));
+    }
+  };
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6">
@@ -59,7 +70,7 @@ function NewTenders() {
                   <>
                     <Button
                       onClick={() => {
-                        setHandled((h) => ({ ...h, [t.id]: "Added to relevant tenders." }));
+                        mark(t.id, "RELEVANT", "Added to relevant tenders.");
                         toast.success("Tender marked as relevant.");
                       }}
                     >
@@ -68,7 +79,7 @@ function NewTenders() {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        setHandled((h) => ({ ...h, [t.id]: "Ignored." }));
+                        mark(t.id, "ARCHIVED", "Ignored.");
                         toast.success("Tender ignored.");
                       }}
                     >

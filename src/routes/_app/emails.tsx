@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/app/PageHeader";
-import { emailThreads } from "@/data/mock";
+import { emailThreads as mockEmailThreads } from "@/data/mock";
+import { getEmailThreads, isFirebaseConfigured, sendTenderEmail, useLive } from "@/lib/live-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/emails")({

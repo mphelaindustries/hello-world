@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/app/PageHeader";
 import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
 import { DeadlinePill, MatchScore, StatusBadge } from "@/components/app/StatusBadge";
-import { daysUntil, formatDate, tenders } from "@/data/mock";
+import { daysUntil, formatDate, tenders as mockTenders } from "@/data/mock";
+import { getTenders, useLive } from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/")({
   component: Dashboard,
@@ -20,14 +21,16 @@ export const Route = createFileRoute("/_app/")({
   }),
 });
 
-const stats = [
-  { label: "New Tenders", value: "127", trend: "+18 this week", icon: Sparkles },
-  { label: "Relevant Tenders", value: "34", trend: "+7 this week", icon: Target },
-  { label: "Active Tenders", value: "8", trend: "3 closing this week", icon: FileStack },
-  { label: "Submitted", value: "21", trend: "+4 this month", icon: Send },
-];
-
 function Dashboard() {
+  const { data: tenders } = useLive("tenders", getTenders, mockTenders);
+
+  const stats = [
+    { label: "New Tenders", value: String(tenders.filter((t) => t.status === "NEW").length), trend: "waiting for review", icon: Sparkles },
+    { label: "Relevant Tenders", value: String(tenders.filter((t) => t.status === "RELEVANT" || t.status === "REVIEWING").length), trend: "worth pursuing", icon: Target },
+    { label: "Active Tenders", value: String(tenders.filter((t) => t.status === "IN PROGRESS" || t.status === "READY").length), trend: "in preparation", icon: FileStack },
+    { label: "Submitted", value: String(tenders.filter((t) => t.status === "SUBMITTED" || t.status === "WON").length), trend: "sent to clients", icon: Send },
+  ];
+
   const upcoming = tenders
     .filter((t) => daysUntil(t.closingDate) >= 0)
     .sort((a, b) => daysUntil(a.closingDate) - daysUntil(b.closingDate))

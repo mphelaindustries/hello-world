@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/app/PageHeader";
 import { MobileDetailDialog } from "@/components/app/MobileDetailDialog";
-import { certifications, company, directors, experience } from "@/data/mock";
+import { certifications as mockCertifications, company as mockCompany, directors as mockDirectors, experience as mockExperience } from "@/data/mock";
+import { getCompanyProfile, useLive } from "@/lib/live-data";
 
 export const Route = createFileRoute("/_app/company")({
   component: CompanyProfile,
@@ -22,25 +23,29 @@ export const Route = createFileRoute("/_app/company")({
   }),
 });
 
-const fields: [string, string][] = [
-  ["Company Name", company.name],
-  ["Trading Name", company.tradingName],
-  ["Registration Number", company.registrationNumber],
-  ["VAT Number", company.vatNumber],
-  ["Company Type", company.type],
-  ["Year Established", company.yearEstablished],
-  ["Physical Address", company.physicalAddress],
-  ["Postal Address", company.postalAddress],
-  ["Province", company.province],
-  ["City", company.city],
-  ["Postal Code", company.postalCode],
-  ["Website", company.website],
-  ["Email", company.email],
-  ["Phone", company.phone],
-  ["Alternative Phone", company.altPhone],
-];
-
 function CompanyProfile() {
+  const { data: profile } = useLive("company", getCompanyProfile, {
+    company: mockCompany, directors: mockDirectors, certifications: mockCertifications, experience: mockExperience,
+  });
+  const { company, directors, certifications, experience } = profile;
+
+  const fields: [string, string][] = [
+    ["Company Name", company.name],
+    ["Trading Name", company.tradingName],
+    ["Registration Number", company.registrationNumber],
+    ["VAT Number", company.vatNumber],
+    ["Company Type", company.type],
+    ["Year Established", company.yearEstablished],
+    ["Physical Address", company.physicalAddress],
+    ["Postal Address", company.postalAddress],
+    ["Province", company.province],
+    ["City", company.city],
+    ["Postal Code", company.postalCode],
+    ["Website", company.website],
+    ["Email", company.email],
+    ["Phone", company.phone],
+    ["Alternative Phone", company.altPhone],
+  ];
   return (
     <div className="mx-auto max-w-[1200px] space-y-6">
       <PageHeader title="Company Profile" subtitle="Information reused across every tender submission." />
