@@ -43,14 +43,19 @@ Firestore document id, so re-running the scraper never creates duplicates.
 
 ## 2. Deploy Firebase
 
+1. Create a Firebase project at https://console.firebase.google.com and copy its project ID.
+2. In `backend/firebase/.firebaserc`, replace `YOUR-FIREBASE-PROJECT-ID` with your real project ID.
+3. Deploy:
+
 ```bash
 cd backend/firebase
 firebase login
-firebase use --add            # pick your project
+firebase use --add            # pick your project, or it reads .firebaserc
 firebase deploy --only firestore:rules,firestore:indexes,storage
 cd ../functions && npm install
 firebase deploy --only functions
 ```
+
 
 Function config needed:
 
