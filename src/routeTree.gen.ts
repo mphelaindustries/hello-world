@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppAssistantRouteImport } from './routes/_app/assistant'
 import { Route as AppCompanyRouteImport } from './routes/_app/company'
 import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
 import { Route as AppEmailsRouteImport } from './routes/_app/emails'
@@ -31,6 +32,11 @@ const AppRoute = AppRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAssistantRoute = AppAssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCompanyRoute = AppCompanyRouteImport.update({
@@ -96,6 +102,7 @@ const AppTendersNewRoute = AppTendersNewRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/assistant': typeof AppAssistantRoute
   '/company': typeof AppCompanyRoute
   '/documents': typeof AppDocumentsRoute
   '/emails': typeof AppEmailsRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/tenders/': typeof AppTendersIndexRoute
 }
 export interface FileRoutesByTo {
+  '/assistant': typeof AppAssistantRoute
   '/company': typeof AppCompanyRoute
   '/documents': typeof AppDocumentsRoute
   '/emails': typeof AppEmailsRoute
@@ -127,6 +135,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/_app/assistant': typeof AppAssistantRoute
   '/_app/company': typeof AppCompanyRoute
   '/_app/documents': typeof AppDocumentsRoute
   '/_app/emails': typeof AppEmailsRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/assistant'
     | '/company'
     | '/documents'
     | '/emails'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/tenders/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/assistant'
     | '/company'
     | '/documents'
     | '/emails'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/_app/assistant'
     | '/_app/company'
     | '/_app/documents'
     | '/_app/emails'
@@ -208,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/assistant': {
+      id: '/_app/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AppAssistantRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/company': {
@@ -298,6 +317,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAssistantRoute: typeof AppAssistantRoute
   AppCompanyRoute: typeof AppCompanyRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppEmailsRoute: typeof AppEmailsRoute
@@ -314,6 +334,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAssistantRoute: AppAssistantRoute,
   AppCompanyRoute: AppCompanyRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppEmailsRoute: AppEmailsRoute,
