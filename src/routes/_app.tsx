@@ -1,5 +1,5 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   Bell,
   Building2,
@@ -39,6 +39,7 @@ import {
   useLive, type LiveNotification,
 } from "@/lib/live-data";
 import { ensureFirebase } from "@/lib/firebase";
+import { signOutUser, useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app")({
@@ -87,7 +88,7 @@ function AppLayout() {
     .split(/[\s@.]+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((p) => p[0]!.toUpperCase())
+    .map((p: string) => p[0]!.toUpperCase())
     .join("");
 
   const logOut = async () => {
@@ -280,11 +281,11 @@ function AppLayout() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent">
                   <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                    LM
+                    {initials || "LM"}
                   </span>
                   <span className="hidden text-left sm:block">
-                    <span className="block text-sm font-medium leading-tight">Lufuno Mphela</span>
-                    <span className="block text-[11px] text-muted-foreground">Administrator</span>
+                    <span className="block max-w-[160px] truncate text-sm font-medium leading-tight">{displayName}</span>
+                    <span className="block text-[11px] text-muted-foreground">{demoMode ? "Demo mode" : "Signed in"}</span>
                   </span>
                 </button>
               </DropdownMenuTrigger>
@@ -297,7 +298,7 @@ function AppLayout() {
                   <Link to="/settings">Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Log out</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => void logOut()}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
