@@ -164,7 +164,7 @@ function AppLayout() {
       )}
 
       <div className={cn("flex min-h-screen flex-col transition-[padding]", collapsed ? "lg:pl-[68px]" : "lg:pl-64")}>
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/95 px-4 backdropblur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur sm:px-6">
           <button className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu className="size-5" />
           </button>
