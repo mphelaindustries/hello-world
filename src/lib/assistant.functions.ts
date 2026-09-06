@@ -126,8 +126,8 @@ export const chatWithAssistant = createServerFn({ method: "POST" })
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        authorization: `Bearer ${key}`,
-        "content-type": "application/json",
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
         "HTTP-Referer": "https://tender-os.lovable.app",
         "X-Title": "Tender OS",
       },
